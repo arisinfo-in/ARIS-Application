@@ -60,22 +60,40 @@ class SpeechAnalysisService {
 
   async analyzeSpeech(audioBlob: Blob, question: string, difficulty: string): Promise<SpeechAnalysisResult> {
     try {
-      // Convert audio to text using Web Speech API
-      const transcript = await this.speechToText(audioBlob);
+      console.log('Starting speech analysis using Netlify Function...');
       
-      // Analyze the transcript with question context
-      const keywords = this.extractKeywords(transcript, question);
-      const sentiment = this.analyzeSentiment(transcript);
-      const fluency = this.analyzeFluency(transcript);
-      const technicalAccuracy = this.analyzeTechnicalAccuracy(transcript, question, difficulty);
+      // Convert audio to base64 for transmission
+      const audioData = await this.blobToBase64(audioBlob);
+      
+      const response = await fetch('/.netlify/functions/speech-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          audioData,
+          question,
+          difficulty,
+          module: 'general'
+        })
+      });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Speech analysis function error');
+      }
+
+      const data = await response.json();
+      console.log('Speech analysis completed:', data);
+      
+      // Convert the response to match our interface
       return {
-        transcript,
-        confidence: 0.85, // Placeholder - would be calculated from speech recognition
-        keywords,
-        sentiment,
-        fluency,
-        technicalAccuracy
+        transcript: data.transcription,
+        confidence: data.confidence || 0.85,
+        keywords: this.extractKeywords(data.transcription, question),
+        sentiment: this.analyzeSentiment(data.transcription),
+        fluency: this.analyzeFluency(data.transcription),
+        technicalAccuracy: this.analyzeTechnicalAccuracy(data.transcription, question, difficulty)
       };
     } catch (error) {
       console.error('Error analyzing speech:', error);
@@ -83,7 +101,21 @@ class SpeechAnalysisService {
     }
   }
 
-  private async speechToText(): Promise<string> {
+  private async blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove the data URL prefix to get just the base64 string
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  private async speechToText(audioBlob?: Blob): Promise<string> {
     return new Promise((resolve) => {
       // Check if Web Speech API is available
       if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -110,13 +142,21 @@ class SpeechAnalysisService {
       recognition.maxAlternatives = 1;
 
       let finalTranscript = '';
+      let isProcessing = false;
 
       recognition.onresult = (event: SpeechRecognitionEvent) => {
+        if (isProcessing) return; // Prevent duplicate processing
+        isProcessing = true;
+        
         for (let i = event.resultIndex; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript + ' ';
+            const transcript = event.results[i][0].transcript.trim();
+            if (transcript && !finalTranscript.includes(transcript)) {
+              finalTranscript += (finalTranscript ? ' ' : '') + transcript;
+            }
           }
         }
+        isProcessing = false;
       };
 
       recognition.onend = () => {
@@ -139,7 +179,9 @@ class SpeechAnalysisService {
       
       // Stop recognition after 30 seconds to prevent hanging
       setTimeout(() => {
-        recognition.stop();
+        if (recognition.state === 'started') {
+          recognition.stop();
+        }
       }, 30000);
     });
   }

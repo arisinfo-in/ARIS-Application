@@ -1,236 +1,158 @@
-interface GroqResponse {
-  choices: Array<{
-    message: {
-      content: string;
+const fetch = require('node-fetch');
+
+exports.handler = async (event, context) => {
+  // Enable CORS
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+
+  // Handle preflight requests
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers,
+      body: ''
     };
-  }>;
+  }
+
+  // Only allow POST requests
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ error: 'Method not allowed' })
+    };
+  }
+
+  try {
+    const { prompt, module, conversationHistory = [] } = JSON.parse(event.body);
+
+    if (!prompt || !module) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Missing required fields: prompt and module' })
+      };
+    }
+
+    // Get API key from environment variables or use fallback
+    const apiKey = process.env.GROQ_API_KEY || '';
+    if (!apiKey) {
+      console.error('GROQ_API_KEY not found in environment variables');
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'Server configuration error' })
+      };
+    }
+
+    // Build conversation context
+    const conversationContext = buildConversationContext(conversationHistory);
+    const systemPrompt = getSystemPrompt(module);
+    const fullPrompt = `${systemPrompt}\n\n${conversationContext}User: ${prompt}`;
+
+    // Call Groq API
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-oss-120b",
+        messages: [{
+          role: "user",
+          content: fullPrompt
+        }],
+        temperature: 1,
+        max_completion_tokens: 4096,
+        top_p: 1,
+        reasoning_effort: "medium",
+        stream: false,
+        stop: null
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      const errorData = JSON.parse(errorText);
+      
+      if (errorData.error?.code === 429) {
+        const retryAfter = errorData.error?.details?.[0]?.retryDelay || '30 seconds';
+        return {
+          statusCode: 429,
+          headers,
+          body: JSON.stringify({ 
+            error: `API quota exceeded. Please try again in ${retryAfter} or upgrade your API plan.` 
+          })
+        };
+      }
+      
+      console.error('Groq API Error:', errorText);
+      return {
+        statusCode: response.status,
+        headers,
+        body: JSON.stringify({ 
+          error: `API error: ${response.status} ${response.statusText}` 
+        })
+      };
+    }
+
+    const data = await response.json();
+    
+    if (!data.choices || data.choices.length === 0) {
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'No response generated from AI' })
+      };
+    }
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ 
+        response: data.choices[0].message.content,
+        module,
+        timestamp: new Date().toISOString()
+      })
+    };
+
+  } catch (error) {
+    console.error('Error in ai-tutor function:', error);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ 
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      })
+    };
+  }
+};
+
+function buildConversationContext(conversationHistory) {
+  if (!conversationHistory || conversationHistory.length === 0) {
+    return '';
+  }
+
+  // Only include the last 10 messages to avoid token limits
+  const recentMessages = conversationHistory.slice(-10);
+  
+  const context = recentMessages.map(msg => {
+    const role = msg.isUser ? 'User' : 'Assistant';
+    return `${role}: ${msg.content}`;
+  }).join('\n');
+
+  return `Conversation History:\n${context}\n\n`;
 }
 
-class GeminiService {
-  private baseUrl: string;
-
-  constructor() {
-    // Use Netlify Functions for API calls
-    this.baseUrl = '/.netlify/functions';
-  }
-
-  private async makeApiCall(prompt: string, isDynamicTest: boolean = false): Promise<string> {
-    const endpoint = isDynamicTest ? '/generate-test' : '/ai-tutor';
-    const keyType = isDynamicTest ? 'Practice Test' : 'AI Tutor';
-    
-    console.log(`Using ${keyType} Netlify Function`);
-    
-    try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          prompt,
-          module: 'general', // This will be overridden by the calling method
-          conversationHistory: []
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `${keyType} function error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.response) {
-        throw new Error('No response generated from AI function');
-      }
-
-      console.log(`${keyType} function call successful`);
-      return data.response;
-      
-    } catch (error) {
-      console.error(`Error with ${keyType} function:`, error);
-      throw error;
-    }
-  }
-
-  async generateResponse(prompt: string, module: string, conversationHistory: Array<{ content: string; isUser: boolean }> = []): Promise<string> {
-    try {
-      console.log(`Generating response for module: ${module}`);
-      console.log(`Conversation history: ${conversationHistory.length} messages`);
-      
-      // Try Netlify Function first
-      try {
-        const response = await fetch(`${this.baseUrl}/ai-tutor`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            prompt,
-            module,
-            conversationHistory
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          return data.response;
-        } else {
-          console.log('Netlify function not available, falling back to direct API call');
-        }
-      } catch (functionError) {
-        console.log('Netlify function error, falling back to direct API call:', functionError);
-      }
-
-      // Fallback to direct API call
-      const apiKey = import.meta.env.VITE_GROQ_API_KEY || '';
-      const conversationContext = this.buildConversationContext(conversationHistory);
-      const systemPrompt = this.getSystemPrompt(module);
-      const fullPrompt = `${systemPrompt}\n\n${conversationContext}User: ${prompt}`;
-
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-oss-120b",
-          messages: [{
-            role: "user",
-            content: fullPrompt
-          }],
-          temperature: 1,
-          max_completion_tokens: 4096,
-          top_p: 1,
-          reasoning_effort: "medium",
-          stream: false,
-          stop: null
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        const errorData = JSON.parse(errorText);
-        
-        if (errorData.error?.code === 429) {
-          const retryAfter = errorData.error?.details?.[0]?.retryDelay || '30 seconds';
-          throw new Error(`API quota exceeded. Please try again in ${retryAfter} or upgrade your API plan.`);
-        }
-        
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.choices || data.choices.length === 0) {
-        throw new Error('No response generated from AI');
-      }
-
-      return data.choices[0].message.content;
-    } catch (error) {
-      console.error('Error generating response:', error);
-      throw new Error('Failed to get AI response. Please try again.');
-    }
-  }
-
-  private buildConversationContext(conversationHistory: Array<{ content: string; isUser: boolean }>): string {
-    if (!conversationHistory || conversationHistory.length === 0) {
-      return '';
-    }
-
-    // Only include the last 10 messages to avoid token limits
-    const recentMessages = conversationHistory.slice(-10);
-    
-    const context = recentMessages.map(msg => {
-      const role = msg.isUser ? 'User' : 'Assistant';
-      return `${role}: ${msg.content}`;
-    }).join('\n');
-
-    return `Conversation History:\n${context}\n\n`;
-  }
-
-  async generateDynamicTest(systemPrompt: string): Promise<string> {
-    try {
-      console.log('Generating dynamic test...');
-      
-      // Try Netlify Function first
-      try {
-        const response = await fetch(`${this.baseUrl}/generate-test`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            module: 'general',
-            difficulty: 'intermediate',
-            questionCount: 5,
-            topics: []
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          return JSON.stringify(data.questions);
-        } else {
-          console.log('Netlify function not available, falling back to direct API call');
-        }
-      } catch (functionError) {
-        console.log('Netlify function error, falling back to direct API call:', functionError);
-      }
-
-      // Fallback to direct API call
-      const apiKey = import.meta.env.VITE_GROQ_API_KEY || '';
-      
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-oss-120b",
-          messages: [{
-            role: "user",
-            content: systemPrompt
-          }],
-          temperature: 1,
-          max_completion_tokens: 4096,
-          top_p: 1,
-          reasoning_effort: "medium",
-          stream: false,
-          stop: null
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        const errorData = JSON.parse(errorText);
-        
-        if (errorData.error?.code === 429) {
-          const retryAfter = errorData.error?.details?.[0]?.retryDelay || '30 seconds';
-          throw new Error(`API quota exceeded. Please try again in ${retryAfter} or upgrade your API plan.`);
-        }
-        
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.choices || data.choices.length === 0) {
-        throw new Error('No response generated from AI');
-      }
-
-      return data.choices[0].message.content;
-    } catch (error) {
-      console.error('Error generating dynamic test:', error);
-      throw new Error('Failed to generate dynamic test questions');
-    }
-  }
-
-  private getSystemPrompt(module: string): string {
-    const modulePrompts = {
-      excel: `You are EXCLUSIVELY a Microsoft Excel expert tutor. You ONLY provide Excel-specific knowledge and solutions.
+function getSystemPrompt(module) {
+  const modulePrompts = {
+    excel: `You are EXCLUSIVELY a Microsoft Excel expert tutor. You ONLY provide Excel-specific knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about Microsoft Excel
@@ -258,7 +180,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate Excel solutions`,
 
-      powerbi: `You are EXCLUSIVELY a Microsoft Power BI expert tutor. You ONLY provide Power BI-specific knowledge and solutions.
+    powerbi: `You are EXCLUSIVELY a Microsoft Power BI expert tutor. You ONLY provide Power BI-specific knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about Microsoft Power BI
@@ -287,7 +209,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate Power BI solutions`,
 
-      sql: `You are EXCLUSIVELY a SQL and Database expert tutor. You ONLY provide SQL-specific knowledge and solutions.
+    sql: `You are EXCLUSIVELY a SQL and Database expert tutor. You ONLY provide SQL-specific knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about SQL and databases
@@ -316,7 +238,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate SQL solutions`,
 
-      python: `You are EXCLUSIVELY a Python expert tutor. You ONLY provide Python-specific knowledge and solutions.
+    python: `You are EXCLUSIVELY a Python expert tutor. You ONLY provide Python-specific knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about Python programming
@@ -345,7 +267,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate Python solutions`,
 
-      statistics: `You are EXCLUSIVELY a Statistics expert tutor. You ONLY provide statistical knowledge and solutions.
+    statistics: `You are EXCLUSIVELY a Statistics expert tutor. You ONLY provide statistical knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about statistics and statistical methods
@@ -374,7 +296,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate statistical solutions`,
 
-      ml: `You are EXCLUSIVELY a Machine Learning expert tutor. You ONLY provide ML-specific knowledge and solutions.
+    ml: `You are EXCLUSIVELY a Machine Learning expert tutor. You ONLY provide ML-specific knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about machine learning and AI
@@ -403,7 +325,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate ML solutions`,
 
-      prompt: `You are EXCLUSIVELY a Prompt Engineering expert tutor. You ONLY provide prompt engineering knowledge and solutions.
+    prompt: `You are EXCLUSIVELY a Prompt Engineering expert tutor. You ONLY provide prompt engineering knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about prompt engineering and AI interaction
@@ -432,7 +354,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate prompt engineering solutions`,
 
-      advanced: `You are EXCLUSIVELY an Advanced AI expert tutor. You ONLY provide advanced AI and cutting-edge technology knowledge.
+    advanced: `You are EXCLUSIVELY an Advanced AI expert tutor. You ONLY provide advanced AI and cutting-edge technology knowledge.
 
 STRICT RULES:
 - ONLY answer questions about advanced AI, deep learning, and cutting-edge technologies
@@ -460,11 +382,8 @@ RESPONSE STYLE:
 - Real advanced code with proper syntax
 - **Highlighted key concepts** and important terms
 - Focus on immediate advanced AI solutions`
-    };
+  };
 
-    return modulePrompts[module as keyof typeof modulePrompts] || 
-           `You are an expert data analysis tutor. Help users learn data analysis concepts, tools, and techniques. Provide clear explanations with practical examples.`;
-  }
+  return modulePrompts[module] || 
+         `You are an expert data analysis tutor. Help users learn data analysis concepts, tools, and techniques. Provide clear explanations with practical examples.`;
 }
-
-export const geminiService = new GeminiService();

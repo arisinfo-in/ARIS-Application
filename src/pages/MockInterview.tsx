@@ -192,14 +192,16 @@ const MockInterview: React.FC = () => {
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
+    let finalTranscript = '';
+
     recognition.onstart = () => {
       setIsTranscribing(true);
       setLiveTranscript('');
+      finalTranscript = '';
     };
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interimTranscript = '';
-      let finalTranscript = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
@@ -210,7 +212,8 @@ const MockInterview: React.FC = () => {
         }
       }
 
-      setLiveTranscript(prev => prev + finalTranscript + interimTranscript);
+      // Only show final transcript + current interim transcript
+      setLiveTranscript(finalTranscript + interimTranscript);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {

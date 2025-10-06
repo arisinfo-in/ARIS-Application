@@ -37,16 +37,6 @@ const InterviewResults: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
-  useEffect(() => {
-    // Get data from location state or simulate if not available
-    const locationState = location.state as { question?: string; difficulty?: string } | null;
-    if (locationState?.question && locationState?.difficulty) {
-      simulateAnalysis(locationState.question, locationState.difficulty);
-    } else {
-      simulateAnalysis();
-    }
-  }, [location.state, simulateAnalysis]);
-
   const simulateAnalysis = useCallback(async (question?: string, difficulty?: string) => {
     setLoading(true);
     try {
@@ -149,6 +139,16 @@ const InterviewResults: React.FC = () => {
       setLoading(false);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    // Get data from location state or simulate if not available
+    const locationState = location.state as { question?: string; difficulty?: string } | null;
+    if (locationState?.question && locationState?.difficulty) {
+      simulateAnalysis(locationState.question, locationState.difficulty);
+    } else {
+      simulateAnalysis();
+    }
+  }, [location.state, simulateAnalysis]);
 
   const getScoreColor = (score: number) => {
     if (score >= 8) return 'text-green-400';

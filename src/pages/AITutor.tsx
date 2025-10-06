@@ -203,21 +203,15 @@ const AITutor: React.FC = () => {
 
 
   const sendMessage = async () => {
-    console.log('sendMessage called', { inputValue: inputValue.trim(), loading, sessionId, moduleId });
+    const messageText = inputValue.trim();
     
-    if (!inputValue.trim() || loading || !sessionId || !moduleId) {
-      console.log('sendMessage blocked:', { 
-        hasInput: !!inputValue.trim(), 
-        loading, 
-        hasSessionId: !!sessionId, 
-        hasModuleId: !!moduleId 
-      });
+    if (!messageText || loading || !sessionId || !moduleId) {
       return;
     }
 
     const userMessage: AIMessage = {
       id: uuidv4(),
-      content: inputValue.trim(),
+      content: messageText,
       isUser: true,
       timestamp: new Date().toISOString()
     };
@@ -231,7 +225,7 @@ const AITutor: React.FC = () => {
 
     try {
       // Get AI response from Gemini API with conversation history
-      const aiResponse = await geminiService.generateResponse(userMessage.content, moduleId, messages);
+      const aiResponse = await geminiService.generateResponse(messageText, moduleId, messages);
       
       const aiMessage: AIMessage = {
         id: uuidv4(),
@@ -244,9 +238,14 @@ const AITutor: React.FC = () => {
       setMessages(finalMessages);
 
       // Update session in Firestore
-      await firestoreOperations.updateAISession(sessionId, {
-        messages: finalMessages
-      });
+      try {
+        await firestoreOperations.updateAISession(sessionId, {
+          messages: finalMessages
+        });
+      } catch (firestoreError) {
+        console.error('Error updating Firestore session:', firestoreError);
+        // Continue even if Firestore update fails
+      }
 
       setLoading(false);
     } catch (error) {
@@ -267,11 +266,9 @@ const AITutor: React.FC = () => {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    console.log('Key pressed:', e.key, 'Shift:', e.shiftKey);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      console.log('Calling sendMessage from handleKeyPress');
       sendMessage();
     }
   };
@@ -474,19 +471,38 @@ const AITutor: React.FC = () => {
 
       {/* Input */}
       <NeumorphicCard padding="md">
-        <div className="flex gap-3">
-          <textarea
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={`Ask me anything about ${module.name}...`}
-            className="flex-1 resize-none bg-transparent border-none outline-none text-gray-100 placeholder-gray-400"
-            rows={1}
-            style={{
-              minHeight: '40px',
-              maxHeight: '120px'
-            }}
-          />
+        <div className="flex gap-3 items-end">
+          <div className="flex-1 relative">
+            <textarea
+              value={inputValue}
+              onChange={(e) => {
+                setInputValue(e.target.value);
+                // Auto-resize textarea
+                e.target.style.height = 'auto';
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              placeholder={`Ask me anything about ${module.name}...`}
+              className="w-full resize-none bg-transparent border-none outline-none text-gray-100 placeholder-gray-400 pr-12"
+              rows={1}
+              style={{
+                minHeight: '40px',
+                maxHeight: '120px',
+                overflow: 'hidden'
+              }}
+              disabled={loading}
+            />
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              {loading && (
+                <Loader className="w-4 h-4 animate-spin text-orange-500" />
+              )}
+            </div>
+          </div>
           <div className="flex gap-2">
             {!showSuggestions && suggestedQuestions.length > 0 && (
               <NeumorphicButton
@@ -495,20 +511,24 @@ const AITutor: React.FC = () => {
                 onClick={() => setShowSuggestions(true)}
                 icon={Lightbulb}
                 title="Show suggested questions"
+                disabled={loading}
               />
             )}
             <NeumorphicButton
               variant="accent"
               size="md"
-              onClick={() => {
-                console.log('Send button clicked');
-                sendMessage();
-              }}
+              onClick={sendMessage}
               disabled={!inputValue.trim() || loading}
-              icon={Send}
+              icon={loading ? Loader : Send}
+              className={loading ? 'opacity-50 cursor-not-allowed' : ''}
             />
           </div>
         </div>
+        {inputValue.trim() && (
+          <div className="mt-2 text-xs text-gray-400 text-center">
+            Press Enter to send, Shift+Enter for new line
+          </div>
+        )}
       </NeumorphicCard>
     </div>
   );

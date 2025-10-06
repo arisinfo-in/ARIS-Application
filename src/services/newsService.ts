@@ -167,72 +167,30 @@ class NewsService {
   }
 
   /**
-   * Fetch news articles using Gemini API
+   * Fetch news articles using Netlify Function
    */
   private async fetchNewsFromGemini(): Promise<NewsArticle[]> {
-    const prompt = `
-    You are a data analysis and AI news curator. Find and create 8 trending news articles related to:
-    - Data Analysis tools (Excel, Power BI, SQL, Python, R)
-    - AI and Machine Learning in data analysis
-    - Business Intelligence and Analytics
-    - Data Science career trends
-    - New data visualization tools
-    - Statistical analysis and research
-    - Data engineering and pipelines
-    - Prompt engineering for data analysis
-
-    For each article, provide:
-    1. A compelling, accurate title (real or realistic)
-    2. A detailed summary (2-3 sentences)
-    3. Full article content (500-800 words)
-    4. Author name (realistic)
-    5. Source publication (realistic)
-    6. Category (one of: excel, powerbi, sql, python, ai, statistics, career, tools)
-    7. Relevant tags (3-5 tags)
-    8. Read time estimate (3-12 minutes)
-    9. Whether it's trending (true/false)
-    10. A realistic URL
-
-    Format the response as a JSON array of objects with these exact fields:
-    - id (string, unique)
-    - title (string)
-    - summary (string)
-    - content (string)
-    - author (string)
-    - source (string)
-    - url (string)
-    - publishedAt (ISO string, recent dates)
-    - category (string)
-    - tags (array of strings)
-    - readTime (number)
-    - trending (boolean)
-    - imageUrl (string, placeholder URL)
-
-    Make the articles current, relevant, and valuable for data analysts and AI professionals.
-    `;
-
     try {
-      const response = await geminiService.generateContent(prompt);
-      const articles = JSON.parse(response);
-      
-      // Validate and process the articles
-      return articles.map((article: { id?: string; title?: string; summary?: string; content?: string; author?: string; publishedAt?: string; category?: string; tags?: string[]; readTime?: number; imageUrl?: string }, index: number) => ({
-        id: article.id || `article_${Date.now()}_${index}`,
-        title: article.title || 'Untitled Article',
-        summary: article.summary || 'No summary available',
-        content: article.content || 'No content available',
-        author: article.author || 'Unknown Author',
-        source: article.source || 'Unknown Source',
-        url: article.url || '#',
-        publishedAt: article.publishedAt || new Date().toISOString(),
-        category: article.category || 'general',
-        tags: Array.isArray(article.tags) ? article.tags : [],
-        readTime: typeof article.readTime === 'number' ? article.readTime : 5,
-        trending: Boolean(article.trending),
-        imageUrl: article.imageUrl || `https://via.placeholder.com/400x200/1f2937/ffffff?text=${encodeURIComponent(article.title?.substring(0, 20) || 'News')}`
-      }));
+      const response = await fetch('/.netlify/functions/news-feed', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          moduleId: 'general',
+          category: 'all',
+          limit: 8
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`News function error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.articles || [];
     } catch (error) {
-      console.error('Error parsing Gemini response:', error);
+      console.error('Error fetching news from Netlify function:', error);
       return this.getMockNewsData();
     }
   }
