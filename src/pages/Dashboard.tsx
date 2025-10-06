@@ -41,8 +41,7 @@ const Dashboard: React.FC = () => {
     // Real-time listener for study plans
     const studyPlansQuery = query(
       collection(db, 'studyPlans'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', user.uid)
     );
 
     const unsubscribeStudyPlans = onSnapshot(studyPlansQuery, (snapshot) => {
@@ -50,6 +49,8 @@ const Dashboard: React.FC = () => {
         id: doc.id,
         ...doc.data()
       })) as StudyPlan[];
+      // Sort by createdAt in JavaScript instead of Firestore
+      plans.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setStudyPlans(plans);
     }, (error) => {
       console.error('Error listening to study plans:', error);
