@@ -19,7 +19,7 @@ const CertificateDetails: React.FC = () => {
       duration: '4-5 hours',
       level: 'Advanced',
       price: 'Free',
-      image: '/Images/Qunatium Data Analytics.png',
+      image: '/Qunatium Data Analytics.png',
       link: 'https://www.theforage.com/simulations/quantium/data-analytics-rqkb',
       skills: ['Data Validation', 'Data Visualization', 'Data Cleaning', 'Programming', 'Data Analysis', 'Commercial Thinking', 'Statistical Analysis'],
       whatYoullLearn: [
@@ -43,7 +43,7 @@ const CertificateDetails: React.FC = () => {
       duration: '1-2 hours',
       level: 'Intermediate',
       price: 'Free',
-      image: '/Images/Deloitte Data Analytics.png',
+      image: '/Deloitte Data Analytics.png',
       link: 'https://www.theforage.com/simulations/deloitte-au/data-analytics-s5zy',
       skills: ['Data Analysis', 'Client Consulting', 'Business Intelligence', 'Data Visualization', 'Statistical Analysis', 'Problem Solving', 'Team Collaboration'],
       whatYoullLearn: [
@@ -68,7 +68,7 @@ const CertificateDetails: React.FC = () => {
       duration: '3-4 hours',
       level: 'Intermediate',
       price: 'Free',
-      image: '/Images/TATA Data Analytics.png',
+      image: '/TATA Data Analytics.png',
       link: 'https://www.theforage.com/simulations/tata/data-analytics-t3zr',
       skills: ['Generative AI', 'Data Analytics', 'No-Code Platforms', 'Business Intelligence', 'Machine Learning', 'Prompt Engineering', 'Data Visualization'],
       whatYoullLearn: [
@@ -93,7 +93,7 @@ const CertificateDetails: React.FC = () => {
           duration: '1.5 hours',
           level: 'Beginner',
           price: 'Free',
-          image: '/Images/Great Learning Google Analytics.png',
+          image: '/Great Learning Google Analytics.png',
           link: 'https://www.mygreatlearning.com/academy/learn-for-free/courses/google-analytics',
           skills: ['Google Analytics', 'Web Analytics', 'Data Analysis', 'Digital Marketing', 'Campaign Tracking', 'User Behavior Analysis', 'Custom Reports'],
           whatYoullLearn: [
@@ -118,7 +118,7 @@ const CertificateDetails: React.FC = () => {
           duration: '28.5 hours',
           level: 'Intermediate',
           price: 'Free',
-          image: '/Images/Great Learning Big Data Anlaytics.png',
+          image: '/Great Learning Big Data Anlaytics.png',
           link: 'https://www.mygreatlearning.com/academy/learn-for-free/courses/mastering-big-data-analytics',
           skills: ['Map Reduce', 'HDFS', 'YARN', 'Hive', 'Apache Hadoop', 'PySpark', 'Kafka', 'Spark Streaming'],
           whatYoullLearn: [
@@ -145,7 +145,7 @@ const CertificateDetails: React.FC = () => {
           duration: '3-4 hours',
           level: 'Intermediate',
           price: 'Free',
-          image: '/Images/Citi Markets Quantitative Analysis.png',
+          image: '/Citi Markets Quantitative Analysis.png',
           link: 'https://www.theforage.com/simulations/citi/global-quantitative-analysis-analyst-6b4m',
           skills: ['Capital Markets', 'Financial Mathematics', 'Quantitative Analysis', 'Risk Management', 'Market Analysis', 'Financial Analysis', 'Critical Thinking', 'Communication Skills'],
           whatYoullLearn: [
@@ -172,7 +172,7 @@ const CertificateDetails: React.FC = () => {
           duration: 'Self-Paced',
           level: 'Beginner',
           price: 'Free',
-          image: '/Images/Cisco Data Analytics Essential.png',
+          image: '/Cisco Data Analytics Essential.png',
           link: 'https://www.netacad.com/courses/data-analytics-essentials?courseLang=en-US',
           skills: ['Data Analytics', 'Data Visualization', 'Statistical Analysis', 'Data Interpretation', 'Business Intelligence', 'Data Tools', 'Analytics Fundamentals', 'Data-Driven Decision Making'],
           whatYoullLearn: [

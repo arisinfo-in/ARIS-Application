@@ -17,7 +17,7 @@ const FreeCertificates: React.FC = () => {
       duration: '4-5 hours',
       level: 'Advanced',
       price: 'Free',
-      image: '/Cerificate Logos/Quntium Logo.png',
+      image: '/Quntium Logo.png',
       link: 'https://www.theforage.com/simulations/quantium/data-analytics-rqkb',
       skills: ['Data Validation', 'Data Visualization', 'Data Cleaning', 'Programming', 'Data Analysis', 'Commercial Thinking', 'Statistical Analysis']
     },
@@ -30,7 +30,7 @@ const FreeCertificates: React.FC = () => {
       duration: '1-2 hours',
       level: 'Intermediate',
       price: 'Free',
-      image: '/Cerificate Logos/Deloitte.png',
+      image: '/Deloitte.png',
       link: 'https://www.theforage.com/simulations/deloitte-au/data-analytics-s5zy',
       skills: ['Data Analysis', 'Client Consulting', 'Business Intelligence', 'Data Visualization', 'Statistical Analysis', 'Problem Solving', 'Team Collaboration']
     },
@@ -43,7 +43,7 @@ const FreeCertificates: React.FC = () => {
       duration: '3-4 hours',
       level: 'Intermediate',
       price: 'Free',
-      image: '/Cerificate Logos/TATA Logo.png',
+      image: '/TATA Logo.png',
       link: 'https://www.theforage.com/simulations/tata/data-analytics-t3zr',
       skills: ['Generative AI', 'Data Analytics', 'No-Code Platforms', 'Business Intelligence', 'Machine Learning', 'Prompt Engineering', 'Data Visualization']
     },
@@ -56,7 +56,7 @@ const FreeCertificates: React.FC = () => {
       duration: '1.5 hours',
       level: 'Beginner',
       price: 'Free',
-      image: '/Cerificate Logos/Google Logo.png',
+      image: '/Google Logo.png',
       link: 'https://www.mygreatlearning.com/academy/learn-for-free/courses/google-analytics',
       skills: ['Google Analytics', 'Web Analytics', 'Data Analysis', 'Digital Marketing', 'Campaign Tracking', 'User Behavior Analysis', 'Custom Reports']
     },
@@ -69,7 +69,7 @@ const FreeCertificates: React.FC = () => {
       duration: '28.5 hours',
       level: 'Intermediate',
       price: 'Free',
-      image: '/Cerificate Logos/Great Learning.png',
+      image: '/Great Learning.png',
       link: 'https://www.mygreatlearning.com/academy/learn-for-free/courses/mastering-big-data-analytics',
       skills: ['Map Reduce', 'HDFS', 'YARN', 'Hive', 'Apache Hadoop', 'PySpark', 'Kafka', 'Spark Streaming']
     },
@@ -82,7 +82,7 @@ const FreeCertificates: React.FC = () => {
       duration: '3-4 hours',
       level: 'Intermediate',
       price: 'Free',
-      image: '/Cerificate Logos/Citi Logo.png',
+      image: '/Citi Logo.png',
       link: 'https://www.theforage.com/simulations/citi/global-quantitative-analysis-analyst-6b4m',
       skills: ['Capital Markets', 'Financial Mathematics', 'Quantitative Analysis', 'Risk Management', 'Market Analysis', 'Financial Analysis', 'Critical Thinking', 'Communication Skills']
     },
@@ -95,7 +95,7 @@ const FreeCertificates: React.FC = () => {
       duration: 'Self-Paced',
       level: 'Beginner',
       price: 'Free',
-      image: '/Cerificate Logos/Cisco Logo.png',
+      image: '/Cisco Logo.png',
       link: 'https://www.netacad.com/courses/data-analytics-essentials?courseLang=en-US',
       skills: ['Data Analytics', 'Data Visualization', 'Statistical Analysis', 'Data Interpretation', 'Business Intelligence', 'Data Tools', 'Analytics Fundamentals', 'Data-Driven Decision Making']
     }
