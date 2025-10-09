@@ -734,13 +734,10 @@ Link: ${proj.link}`).join('\n\n')}
                   variant="accent"
                   className="w-full"
                   onClick={() => {
-                    const template = profileTemplates.find(t => t.id === template.id);
-                    if (template) {
-                      setProfileData(template.preview);
-                      setSelectedTemplate(template.id);
-                      setActiveTab('builder');
-                      setIsEditing(true);
-                    }
+                    setProfileData(template.preview);
+                    setSelectedTemplate(template.id);
+                    setActiveTab('builder');
+                    setIsEditing(true);
                   }}
                 >
                   <Eye className="w-4 h-4 mr-2" />
