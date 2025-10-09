@@ -1,10 +1,3 @@
-interface GroqResponse {
-  choices: Array<{
-    message: {
-      content: string;
-    };
-  }>;
-}
 
 class GeminiService {
   private baseUrl: string;

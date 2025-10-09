@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FolderOpen, BarChart3, Users, ShoppingCart, TrendingUp, DollarSign, Clock, Target, Code } from 'lucide-react';
+import { ArrowLeft, FolderOpen, BarChart3, Users, ShoppingCart, TrendingUp, DollarSign, Clock, Target, Code, Star } from 'lucide-react';
 import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
 

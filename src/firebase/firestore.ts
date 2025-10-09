@@ -152,7 +152,15 @@ export const firestoreOperations = {
   },
 
   async deleteTest(testId: string): Promise<void> {
-    await deleteDoc(doc(db, 'tests', testId));
+    try {
+      console.log('Firestore: Attempting to delete test:', testId);
+      const testRef = doc(db, 'tests', testId);
+      await deleteDoc(testRef);
+      console.log('Firestore: Test deleted successfully');
+    } catch (error) {
+      console.error('Firestore deleteTest error:', error);
+      throw error;
+    }
   },
 
   // Test Attempts

@@ -115,7 +115,7 @@ class SpeechAnalysisService {
     });
   }
 
-  private async speechToText(audioBlob?: Blob): Promise<string> {
+  private async speechToText(): Promise<string> {
     return new Promise((resolve) => {
       // Check if Web Speech API is available
       if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {

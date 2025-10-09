@@ -266,12 +266,6 @@ const AITutor: React.FC = () => {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
 
   const startNewConversation = async () => {
     if (!user || !moduleId) return;

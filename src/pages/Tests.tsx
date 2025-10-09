@@ -1002,16 +1002,21 @@ const Tests: React.FC = () => {
   };
 
   const deleteTest = async (testId: string) => {
-    if (!user) return;
-    
-    if (window.confirm('Are you sure you want to delete this test? This action cannot be undone.')) {
-      try {
-        await firestoreOperations.deleteTest(testId);
-        loadTests();
-      } catch (error) {
-        console.error('Error deleting test:', error);
-        alert('Failed to delete test. Please try again.');
-      }
+    if (!window.confirm('Are you sure you want to delete this test?')) return;
+
+    try {
+      console.log('Deleting test with ID:', testId);
+      await firestoreOperations.deleteTest(testId);
+      console.log('Test deleted successfully');
+      
+      // Remove from local state immediately for better UX
+      setTests(prevTests => prevTests.filter(test => test.id !== testId));
+      
+      // Reload tests to ensure consistency
+      loadTests();
+    } catch (error) {
+      console.error('Error deleting test:', error);
+      alert(`Failed to delete test: ${error.message || 'Unknown error'}`);
     }
   };
 
