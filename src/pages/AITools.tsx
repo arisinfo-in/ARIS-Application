@@ -9,6 +9,47 @@ const AITools: React.FC = () => {
 
   const aiTools = [
     {
+      id: 'ai-data-analyst',
+      name: 'Data Analyst AI Tools',
+      icon: Bot,
+      color: 'from-orange-400 to-orange-500',
+      description: 'Specialized AI tools designed specifically for data analysts',
+      tools: [
+        {
+          name: 'Decide',
+          description: 'One shot data problems that chatGPT can\'t handle',
+          pricing: 'Free',
+          rating: 4.8,
+          category: 'Data Analysis',
+          url: 'https://www.trydecide.co/'
+        },
+        {
+          name: 'Julius AI',
+          description: 'AI-powered data analysis and visualization platform',
+          pricing: 'Free - $20/month',
+          rating: 4.7,
+          category: 'Data Visualization',
+          url: 'https://julius.ai/'
+        },
+        {
+          name: 'Formula Bot',
+          description: 'Connect your data. Ask anything. Get insights 10x faster',
+          pricing: 'Free - $20/month',
+          rating: 4.6,
+          category: 'Data Processing',
+          url: 'https://www.formulabot.com/'
+        },
+        {
+          name: 'Powerdrill AI',
+          description: 'AI-powered data drilling and analysis platform',
+          pricing: 'Free - Custom',
+          rating: 4.5,
+          category: 'Data Mining',
+          url: 'https://powerdrill.ai/'
+        }
+      ]
+    },
+    {
       id: 'data-analysis',
       name: 'Data Analysis & Visualization',
       icon: BarChart3,

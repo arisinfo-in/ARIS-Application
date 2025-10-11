@@ -99,7 +99,7 @@ const Dashboard: React.FC = () => {
     }, 0)
   };
 
-  const recentActivity = testAttempts.slice(0, 5);
+  const recentActivity = testAttempts.slice(0, 2);
 
   if (loading) {
     return (
@@ -231,7 +231,7 @@ const Dashboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {studyPlans.slice(0, 3).map((plan) => (
+                  {studyPlans.slice(0, 2).map((plan) => (
                     <NeumorphicCard key={plan.id} variant="pressed" padding="md">
                       <h4 className="font-medium text-gray-100 mb-2">{plan.title}</h4>
                       <div className="flex items-center gap-2 mb-2">

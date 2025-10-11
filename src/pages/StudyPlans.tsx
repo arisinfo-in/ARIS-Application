@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import { Plus, Calendar, Target, CheckCircle, Circle, Trash2 } from 'lucide-react';
+import { Plus, Calendar, Target, CheckCircle, Circle, Trash2, MessageSquare, Trophy, FileSpreadsheet, BarChart3, Database, Code, TrendingUp, Brain, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +9,7 @@ import { format, addDays } from 'date-fns';
 
 const StudyPlans: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [studyPlans, setStudyPlans] = useState<StudyPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -237,6 +239,27 @@ const StudyPlans: React.FC = () => {
     ml: 'Machine Learning',
     prompt: 'Prompt Engineering',
     advanced: 'Advanced AI'
+  };
+
+  // Module icons for quick actions
+  const moduleIcons = {
+    excel: FileSpreadsheet,
+    powerbi: BarChart3,
+    sql: Database,
+    python: Code,
+    statistics: TrendingUp,
+    ml: Brain,
+    prompt: MessageSquare,
+    advanced: Zap
+  };
+
+  // Handle quick actions
+  const handleAITutorClick = (module: string) => {
+    navigate(`/tutor/${module}`);
+  };
+
+  const handlePracticeTestClick = (module: string) => {
+    navigate('/tests');
   };
 
   const planTypeTemplates = {
@@ -526,31 +549,61 @@ const StudyPlans: React.FC = () => {
               {/* Schedule Items */}
               <div className="space-y-3">
                 <h4 className="font-medium text-gray-100 mb-3">Schedule</h4>
-                {plan.schedule.map((item, index) => (
-                  <NeumorphicCard
-                    key={index}
-                    variant="pressed"
-                    padding="md"
-                    className="cursor-pointer"
-                    onClick={() => toggleScheduleItem(plan.id, index)}
-                  >
-                    <div className="flex items-center gap-3">
-                      {item.completed ? (
-                        <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-orange-500 flex-shrink-0" />
-                      )}
-                      <div className="flex-1">
-                        <p className={`font-medium ${item.completed ? 'text-green-400 line-through' : 'text-gray-100'}`}>
-                          {moduleNames[item.module as keyof typeof moduleNames] || item.module}
-                        </p>
-                        <p className="text-sm text-gray-300">
-                          {format(new Date(item.date), 'MMM d, yyyy')}
-                        </p>
+                {plan.schedule.map((item, index) => {
+                  const ModuleIcon = moduleIcons[item.module as keyof typeof moduleIcons] || Circle;
+                  return (
+                    <NeumorphicCard
+                      key={index}
+                      variant="pressed"
+                      padding="md"
+                      className="cursor-pointer"
+                      onClick={() => toggleScheduleItem(plan.id, index)}
+                    >
+                      <div className="flex items-center gap-3">
+                        {item.completed ? (
+                          <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                        ) : (
+                          <Circle className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                        )}
+                        <div className="flex-1">
+                          <p className={`font-medium ${item.completed ? 'text-green-400 line-through' : 'text-gray-100'}`}>
+                            {moduleNames[item.module as keyof typeof moduleNames] || item.module}
+                          </p>
+                          <p className="text-sm text-gray-300">
+                            {format(new Date(item.date), 'MMM d, yyyy')}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <NeumorphicButton
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAITutorClick(item.module);
+                            }}
+                            icon={MessageSquare}
+                            className="text-xs"
+                          >
+                            <ModuleIcon className="w-3 h-3 mr-1" />
+                            AI Tutor
+                          </NeumorphicButton>
+                          <NeumorphicButton
+                            size="sm"
+                            variant="secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePracticeTestClick(item.module);
+                            }}
+                            icon={Trophy}
+                            className="text-xs"
+                          >
+                            Practice Test
+                          </NeumorphicButton>
+                        </div>
                       </div>
-                    </div>
-                  </NeumorphicCard>
-                ))}
+                    </NeumorphicCard>
+                  );
+                })}
               </div>
 
               {/* Actions */}

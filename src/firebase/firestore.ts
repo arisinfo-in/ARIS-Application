@@ -137,10 +137,22 @@ export const firestoreOperations = {
     return docRef.id;
   },
 
-  async getTests(module?: string): Promise<Test[]> {
-    const testsQuery = module 
-      ? query(collection(db, 'tests'), where('module', '==', module))
-      : collection(db, 'tests');
+  async getTests(module?: string, userId?: string): Promise<Test[]> {
+    let testsQuery;
+    
+    if (module && userId) {
+      testsQuery = query(
+        collection(db, 'tests'), 
+        where('module', '==', module),
+        where('createdBy', '==', userId)
+      );
+    } else if (module) {
+      testsQuery = query(collection(db, 'tests'), where('module', '==', module));
+    } else if (userId) {
+      testsQuery = query(collection(db, 'tests'), where('createdBy', '==', userId));
+    } else {
+      testsQuery = collection(db, 'tests');
+    }
     
     const testsSnapshot = await getDocs(testsQuery);
     return testsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Test));

@@ -35,13 +35,13 @@ const Tests: React.FC = () => {
     setLoading(false); // Set loading to false immediately
     try {
       const testsData = selectedModule === 'all' 
-        ? await firestoreOperations.getTests()
-        : await firestoreOperations.getTests(selectedModule);
+        ? await firestoreOperations.getTests(undefined, user?.uid)
+        : await firestoreOperations.getTests(selectedModule, user?.uid);
       setTests(testsData);
     } catch (error) {
       console.error('Error loading tests:', error);
     }
-  }, [selectedModule]);
+  }, [selectedModule, user?.uid]);
 
   useEffect(() => {
     loadTests();

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, User, LogOut } from 'lucide-react';
+import { Bell, User, LogOut, Instagram, Facebook, Linkedin, Youtube } from 'lucide-react';
 import NeumorphicButton from './NeumorphicButton';
 import NeumorphicCard from './NeumorphicCard';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,6 +16,18 @@ const Navbar: React.FC = () => {
     }
   };
 
+  // Social media links
+  const socialLinks = {
+    instagram: 'https://www.instagram.com/arisinfo.in/',
+    facebook: 'https://www.facebook.com/arisinfo.in',
+    linkedin: 'https://www.linkedin.com/company/arisinfo-in/',
+    youtube: 'https://www.youtube.com/@arisaidataanalyst'
+  };
+
+  const handleSocialClick = (platform: string) => {
+    window.open(socialLinks[platform as keyof typeof socialLinks], '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="fixed top-0 left-64 right-0 h-20 bg-aris-gradient border-b border-gray-700 px-4 sm:px-6 flex items-center justify-between z-30">
       {/* Brand/Title */}
@@ -27,8 +39,47 @@ const Navbar: React.FC = () => {
         </h1>
       </div>
 
-      {/* Right side - notifications and user menu */}
+      {/* Right side - social media, notifications and user menu */}
       <div className="flex items-center gap-2 sm:gap-4">
+        {/* Social Media Icons */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          <NeumorphicButton 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => handleSocialClick('instagram')}
+            title="Follow us on Instagram"
+          >
+            <Instagram size={16} />
+          </NeumorphicButton>
+          
+          <NeumorphicButton 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => handleSocialClick('facebook')}
+            title="Follow us on Facebook"
+          >
+            <Facebook size={16} />
+          </NeumorphicButton>
+          
+          <NeumorphicButton 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => handleSocialClick('linkedin')}
+            title="Connect with us on LinkedIn"
+          >
+            <Linkedin size={16} />
+          </NeumorphicButton>
+          
+          <NeumorphicButton 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => handleSocialClick('youtube')}
+            title="Subscribe to our YouTube channel"
+          >
+            <Youtube size={16} />
+          </NeumorphicButton>
+        </div>
+
         {/* Notifications */}
         <NeumorphicButton variant="ghost" size="sm" className="hidden sm:flex">
           <Bell size={20} />
