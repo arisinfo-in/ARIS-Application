@@ -130,3 +130,13 @@ body {
   color: #e9ecef;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
+
+/* Hide scrollbar while keeping scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}

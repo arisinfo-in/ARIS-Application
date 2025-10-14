@@ -56,7 +56,7 @@ const Sidebar: React.FC = () => {
 
   return (
     <div 
-      className="fixed left-0 top-0 w-64 bg-aris-gradient p-4 z-40 overflow-y-auto"
+      className="fixed left-0 top-0 w-64 bg-aris-gradient p-4 z-40 overflow-y-auto scrollbar-hide"
       style={{ height: sidebarHeight }}
     >
       {/* Logo */}
