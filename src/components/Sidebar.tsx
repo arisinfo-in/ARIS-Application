@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   Home, 
@@ -18,6 +18,19 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Sidebar: React.FC = () => {
   const { isAdmin } = useAuth();
+  const [sidebarHeight, setSidebarHeight] = useState('100vh');
+
+  useEffect(() => {
+    const updateHeight = () => {
+      // Use the actual window height to avoid viewport issues
+      const vh = window.innerHeight;
+      setSidebarHeight(`${vh}px`);
+    };
+
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, []);
 
   const modules = [
     { id: 'advanced', name: 'Advanced AI Tutor', icon: Zap },
@@ -42,7 +55,10 @@ const Sidebar: React.FC = () => {
   }
 
   return (
-    <div className="fixed left-0 top-0 h-full w-64 bg-aris-gradient p-4 z-40">
+    <div 
+      className="fixed left-0 top-0 w-64 bg-aris-gradient p-4 z-40 overflow-y-auto"
+      style={{ height: sidebarHeight }}
+    >
       {/* Logo */}
       <div className="mb-8">
         <div className="text-center">
