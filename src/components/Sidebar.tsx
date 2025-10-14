@@ -42,7 +42,7 @@ const Sidebar: React.FC = () => {
   }
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-64 bg-aris-gradient p-4 z-40">
+    <div className="fixed left-0 top-0 h-full w-64 bg-aris-gradient p-4 z-40">
       {/* Logo */}
       <div className="mb-8">
         <div className="text-center">
