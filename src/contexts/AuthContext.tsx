@@ -30,25 +30,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChange(async (user) => {
-      setUser(user);
-      setLoading(false); // Set loading to false immediately after user state is set
-      
-      // Load user profile asynchronously without blocking
-      if (user) {
-        try {
-          const profile = await firestoreOperations.getUser(user.uid);
-          setUserProfile(profile);
-        } catch (error) {
-          console.error('Error loading user profile:', error);
+    try {
+      const unsubscribe = onAuthStateChange(async (user) => {
+        setUser(user);
+        setLoading(false); // Set loading to false immediately after user state is set
+        
+        // Load user profile asynchronously without blocking
+        if (user) {
+          try {
+            const profile = await firestoreOperations.getUser(user.uid);
+            setUserProfile(profile);
+          } catch (error) {
+            console.error('Error loading user profile:', error);
+            setUserProfile(null);
+          }
+        } else {
           setUserProfile(null);
         }
-      } else {
-        setUserProfile(null);
-      }
-    });
+      });
 
-    return unsubscribe;
+      return unsubscribe;
+    } catch (error) {
+      console.warn('Firebase auth not available:', error);
+      setLoading(false);
+    }
   }, []);
 
   const isAdmin = userProfile?.role === 'admin';

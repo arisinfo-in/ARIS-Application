@@ -1,5 +1,5 @@
 import React, { useState, memo } from 'react';
-import { Search, BookOpen, Newspaper, BookOpenCheck, Play, Briefcase, Bot, FolderOpen } from 'lucide-react';
+import { Search, BookOpen, Newspaper, BookOpenCheck, Play, Briefcase, Bot, FolderOpen, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
@@ -62,6 +62,13 @@ const TheHub: React.FC = () => {
       icon: FolderOpen,
       color: 'from-orange-400 to-orange-500',
       description: 'Ready-to-build data analysis projects for your portfolio'
+    },
+    {
+      id: 'job-finder',
+      name: 'Job Finder',
+      icon: Target,
+      color: 'from-orange-400 to-orange-500',
+      description: 'Find latest data analyst jobs from LinkedIn, Naukri & more'
     }
   ];
 
@@ -87,6 +94,8 @@ const TheHub: React.FC = () => {
       navigate('/news/ai-tools');
     } else if (moduleId === 'standard-projects') {
       navigate('/news/standard-projects');
+    } else if (moduleId === 'job-finder') {
+      navigate('/news/job-finder');
     } else {
       navigate(`/news/${moduleId}`);
     }
@@ -179,6 +188,7 @@ const TheHub: React.FC = () => {
                    module.id === 'job-kit' ? 'Explore Job Kit' :
                    module.id === 'ai-tools' ? 'Explore Tools' :
                    module.id === 'standard-projects' ? 'View Projects' :
+                   module.id === 'job-finder' ? 'Find Jobs' :
                    'Read Articles'}
                 </NeumorphicButton>
               </NeumorphicCard>
