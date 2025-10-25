@@ -1,5 +1,5 @@
 import React, { useState, memo } from 'react';
-import { Search, BookOpen, Newspaper, BookOpenCheck, Play, Briefcase, Bot, FolderOpen, Target } from 'lucide-react';
+import { Search, BookOpen, Newspaper, BookOpenCheck, Play, Briefcase, Bot, FolderOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
@@ -63,13 +63,6 @@ const TheHub: React.FC = () => {
       color: 'from-orange-400 to-orange-500',
       description: 'Ready-to-build data analysis projects for your portfolio'
     },
-    {
-      id: 'job-finder',
-      name: 'Job Finder',
-      icon: Target,
-      color: 'from-orange-400 to-orange-500',
-      description: 'Find latest data analyst jobs from LinkedIn, Naukri & more'
-    }
   ];
 
   // Filter modules based on search query
@@ -94,8 +87,6 @@ const TheHub: React.FC = () => {
       navigate('/news/ai-tools');
     } else if (moduleId === 'standard-projects') {
       navigate('/news/standard-projects');
-    } else if (moduleId === 'job-finder') {
-      navigate('/news/job-finder');
     } else {
       navigate(`/news/${moduleId}`);
     }

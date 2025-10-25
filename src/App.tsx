@@ -36,7 +36,6 @@ import IndustryDetail from './pages/IndustryDetail';
 import AITools from './pages/AITools';
 import StandardProjects from './pages/StandardProjects';
 import ProjectDetail from './pages/ProjectDetail';
-import JobFinder from './pages/JobFinder';
 
 // Lazy load less frequently used pages with preloading
 const TestAttempt = lazy(() => import('./pages/TestAttempt'));
@@ -348,14 +347,6 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <LinkedInStrategy />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/news/job-finder"
-              element={
-                <ProtectedRoute>
-                  <JobFinder />
                 </ProtectedRoute>
               }
             />
