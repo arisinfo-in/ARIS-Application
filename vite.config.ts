@@ -10,8 +10,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Prevent node-fetch from being bundled
-      'node-fetch': 'data:text/javascript,export default {}',
+      // Prevent node-fetch from being bundled - redirect to empty stub
+      'node-fetch': './src/utils/node-fetch-stub.ts',
     },
   },
   build: {
