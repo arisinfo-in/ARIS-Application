@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -11,7 +12,7 @@ export default defineConfig({
   resolve: {
     alias: {
       // Prevent node-fetch from being bundled - redirect to empty stub
-      'node-fetch': './src/utils/node-fetch-stub.ts',
+      'node-fetch': path.resolve(__dirname, 'src/utils/node-fetch-stub.ts'),
     },
   },
   build: {
