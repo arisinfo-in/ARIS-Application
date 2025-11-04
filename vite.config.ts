@@ -13,21 +13,33 @@ export default defineConfig({
     alias: {
       // Prevent node-fetch from being bundled - redirect to empty stub
       'node-fetch': path.resolve(__dirname, 'src/utils/node-fetch-stub.ts'),
+      // Stub Node.js built-in modules for browser compatibility
+      'fs': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'path': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'crypto': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'http': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'https': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'stream': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'util': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'buffer': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'net': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'worker_threads': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'zlib': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      // Also handle node: prefixed imports
+      'node:fs': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'node:path': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'node:crypto': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'node:http': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'node:https': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'node:stream': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'node:util': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'node:buffer': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'node:net': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
+      'node:zlib': path.resolve(__dirname, 'src/utils/node-stubs.ts'),
     },
   },
   build: {
     rollupOptions: {
-      external: (id) => {
-        // Exclude node-fetch and its dependencies from browser bundle
-        if (id === 'node-fetch' || id.startsWith('node-fetch/')) {
-          return true;
-        }
-        // Exclude Node.js built-in modules
-        if (id.startsWith('node:') || ['fs', 'path', 'crypto', 'http', 'https', 'stream', 'util', 'buffer', 'net', 'worker_threads', 'zlib'].includes(id)) {
-          return true;
-        }
-        return false;
-      },
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
