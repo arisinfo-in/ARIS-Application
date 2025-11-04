@@ -149,7 +149,9 @@ const AITutor: React.FC = () => {
         // Load existing conversation
         setMessages(existingSession.messages);
         setSessionId(existingSession.id);
-        console.log('Loaded existing session with', existingSession.messages.length, 'messages');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Loaded existing session with', existingSession.messages.length, 'messages');
+        }
       } else {
         // Create new session with welcome message
         const welcomeMessage: AIMessage = {
@@ -170,10 +172,14 @@ const AITutor: React.FC = () => {
         });
         
         setSessionId(newSessionId);
-        console.log('Created new session');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Created new session');
+        }
       }
     } catch (error) {
-      console.error('Error initializing session:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error initializing session:', error);
+      }
       
       // Fallback: show welcome message even if session creation fails
       const welcomeMessage: AIMessage = {
@@ -243,13 +249,17 @@ const AITutor: React.FC = () => {
           messages: finalMessages
         });
       } catch (firestoreError) {
-        console.error('Error updating Firestore session:', firestoreError);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error updating Firestore session:', firestoreError);
+        }
         // Continue even if Firestore update fails
       }
 
       setLoading(false);
     } catch (error) {
-      console.error('Error sending message:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error sending message:', error);
+      }
       
       // Show error message to user
       const errorMessage: AIMessage = {
@@ -296,9 +306,13 @@ const AITutor: React.FC = () => {
         messages: [welcomeMessage]
       });
 
-      console.log('Started new conversation');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Started new conversation');
+      }
     } catch (error) {
-      console.error('Error starting new conversation:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error starting new conversation:', error);
+      }
     }
   };
 

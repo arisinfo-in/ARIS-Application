@@ -19,14 +19,14 @@ const TheHub: React.FC = () => {
       name: 'All Articles',
       icon: Newspaper,
       color: 'from-orange-400 to-orange-500',
-      description: 'Browse all articles from all categories'
+      description: 'Browse all articles from all modules categories.'
     },
     {
       id: 'series',
       name: 'Modules Series',
       icon: BookOpenCheck,
       color: 'from-orange-400 to-orange-500',
-      description: 'Explore curated article series and learning paths'
+      description: 'Explore curated article series and learning paths.'
     },
     {
       id: 'ai-clips',
@@ -40,28 +40,28 @@ const TheHub: React.FC = () => {
       name: 'Free Certificates',
       icon: BookOpen,
       color: 'from-orange-400 to-orange-500',
-      description: 'Access free data analytics & AI certificates from top providers'
+      description: 'Access free data analytics & AI certificates from top providers.'
     },
     {
       id: 'job-kit',
       name: 'Job Kit',
       icon: Briefcase,
       color: 'from-orange-400 to-orange-500',
-      description: 'Career resources, job search tools, and materials'
+      description: 'Career resources, job search tools, and materials.'
     },
     {
       id: 'ai-tools',
       name: 'AI Tools',
       icon: Bot,
       color: 'from-orange-400 to-orange-500',
-      description: 'Essential AI tools and platforms for data analysts'
+      description: 'Essential AI tools and platforms for data analysts.'
     },
     {
       id: 'standard-projects',
       name: 'Standard Projects',
       icon: FolderOpen,
       color: 'from-orange-400 to-orange-500',
-      description: 'Ready-to-build data analysis projects for your portfolio'
+      description: 'Ready-to-build data analysis projects for your portfolio.'
     },
   ];
 

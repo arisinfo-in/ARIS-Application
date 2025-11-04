@@ -60,7 +60,9 @@ class SpeechAnalysisService {
 
   async analyzeSpeech(audioBlob: Blob, question: string, difficulty: string): Promise<SpeechAnalysisResult> {
     try {
-      console.log('Starting speech analysis using Netlify Function...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Starting speech analysis using Netlify Function...');
+      }
       
       // Convert audio to base64 for transmission
       const audioData = await this.blobToBase64(audioBlob);
@@ -84,7 +86,9 @@ class SpeechAnalysisService {
       }
 
       const data = await response.json();
-      console.log('Speech analysis completed:', data);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Speech analysis completed:', data);
+      }
       
       // Convert the response to match our interface
       return {
@@ -96,8 +100,33 @@ class SpeechAnalysisService {
         technicalAccuracy: this.analyzeTechnicalAccuracy(data.transcription, question, difficulty)
       };
     } catch (error) {
-      console.error('Error analyzing speech:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error analyzing speech:', error);
+      }
       throw new Error('Failed to analyze speech');
+    }
+  }
+
+  async analyzeSpeechFromTranscript(transcript: string, question: string, difficulty: string): Promise<SpeechAnalysisResult> {
+    try {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Analyzing speech from transcript...');
+      }
+      
+      // Use the transcript directly for analysis
+      return {
+        transcript: transcript,
+        confidence: 0.90, // Higher confidence since it's from Web Speech API
+        keywords: this.extractKeywords(transcript, question),
+        sentiment: this.analyzeSentiment(transcript),
+        fluency: this.analyzeFluency(transcript),
+        technicalAccuracy: this.analyzeTechnicalAccuracy(transcript, question, difficulty)
+      };
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error analyzing speech from transcript:', error);
+      }
+      throw new Error('Failed to analyze speech from transcript');
     }
   }
 
@@ -164,7 +193,9 @@ class SpeechAnalysisService {
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('Speech recognition error:', event.error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Speech recognition error:', event.error);
+        }
         // Fallback to simulated transcript on error
         const simulatedTranscripts = [
           "I have experience working with data analysis using Excel and SQL. I've created dashboards and reports that helped stakeholders make informed decisions.",

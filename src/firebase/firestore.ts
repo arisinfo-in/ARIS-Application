@@ -85,6 +85,21 @@ export interface StudyPlan {
   createdAt: string;
 }
 
+// Python Notebook types
+export interface NotebookCell {
+  id: string;
+  code: string;
+}
+
+export interface PythonNotebook {
+  id: string;
+  userId: string;
+  title: string;
+  cells: NotebookCell[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Firestore operations
 export const firestoreOperations = {
   // Users
@@ -210,5 +225,121 @@ export const firestoreOperations = {
 
   async deleteStudyPlan(planId: string): Promise<void> {
     await deleteDoc(doc(db, 'studyPlans', planId));
+  },
+
+  // SQL Queries
+  async saveSQLQuery(userId: string, query: string, dataset: string, title?: string): Promise<string> {
+    const queryData = {
+      userId,
+      query,
+      dataset,
+      title: title || `Query ${new Date().toISOString()}`,
+      createdAt: new Date().toISOString(),
+      executedCount: 0
+    };
+    const docRef = await addDoc(collection(db, 'userQueries'), queryData);
+    return docRef.id;
+  },
+
+  async getUserSQLQueries(userId: string): Promise<Array<{ id: string; query: string; dataset: string; title: string; createdAt: string }>> {
+    const queriesRef = collection(db, 'userQueries');
+    const q = query(
+      queriesRef,
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as any));
+  },
+
+  async deleteSQLQuery(queryId: string): Promise<void> {
+    await deleteDoc(doc(db, 'userQueries', queryId));
+  },
+
+  async updateStudyPlanSQLProgress(planId: string, queriesExecuted: number): Promise<void> {
+    const planRef = doc(db, 'studyPlans', planId);
+    const planDoc = await getDoc(planRef);
+    
+    if (planDoc.exists()) {
+      const planData = planDoc.data() as StudyPlan;
+      const schedule = planData.schedule;
+      
+      // Find SQL items and check if completion threshold is met (e.g., 5 queries)
+      const sqlItems = schedule.filter(item => item.module === 'sql');
+      const completedSqlItems = sqlItems.filter(item => {
+        // Mark as complete if user has executed enough queries
+        return queriesExecuted >= 5 || item.completed;
+      });
+      
+      // Update completed status for SQL items that meet threshold
+      const updatedSchedule = schedule.map(item => {
+        if (item.module === 'sql' && queriesExecuted >= 5 && !item.completed) {
+          return { ...item, completed: true };
+        }
+        return item;
+      });
+      
+      const completedCount = updatedSchedule.filter(item => item.completed).length;
+      const progressPercent = Math.round((completedCount / updatedSchedule.length) * 100);
+      
+      await updateDoc(planRef, {
+        schedule: updatedSchedule,
+        progressPercent
+      });
+    }
+  },
+
+  // Python Notebooks
+  async createPythonNotebook(notebook: Omit<PythonNotebook, 'id'>): Promise<string> {
+    const docRef = await addDoc(collection(db, 'pythonNotebooks'), notebook);
+    return docRef.id;
+  },
+
+  async getUserPythonNotebooks(userId: string): Promise<PythonNotebook[]> {
+    const notebooksQuery = query(
+      collection(db, 'pythonNotebooks'),
+      where('userId', '==', userId),
+      orderBy('updatedAt', 'desc')
+    );
+    const notebooksSnapshot = await getDocs(notebooksQuery);
+    return notebooksSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as PythonNotebook));
+  },
+
+  async getPythonNotebook(notebookId: string): Promise<PythonNotebook | null> {
+    const notebookDoc = await getDoc(doc(db, 'pythonNotebooks', notebookId));
+    return notebookDoc.exists() ? { id: notebookDoc.id, ...notebookDoc.data() } as PythonNotebook : null;
+  },
+
+  async updatePythonNotebook(notebookId: string, updates: Partial<PythonNotebook>): Promise<void> {
+    await updateDoc(doc(db, 'pythonNotebooks', notebookId), {
+      ...updates,
+      updatedAt: new Date().toISOString()
+    });
+  },
+
+  async deletePythonNotebook(notebookId: string): Promise<void> {
+    await deleteDoc(doc(db, 'pythonNotebooks', notebookId));
+  },
+
+  async getLatestPythonNotebook(userId: string): Promise<PythonNotebook | null> {
+    const notebooksQuery = query(
+      collection(db, 'pythonNotebooks'),
+      where('userId', '==', userId),
+      orderBy('updatedAt', 'desc'),
+      limit(1)
+    );
+    const notebooksSnapshot = await getDocs(notebooksQuery);
+    if (notebooksSnapshot.empty) {
+      return null;
+    }
+    const notebookDoc = notebooksSnapshot.docs[0];
+    return { id: notebookDoc.id, ...notebookDoc.data() } as PythonNotebook;
   }
 };

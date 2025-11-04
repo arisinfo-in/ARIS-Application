@@ -1,0 +1,70 @@
+{
+  "classicmodels": {
+    "name": "ClassicModels",
+    "description": "Classic car dealership database with products, customers, orders, and employees",
+    "tables": [
+      {
+        "name": "customers",
+        "description": "Customer information and contact details",
+        "columns": ["customerNumber", "customerName", "contactLastName", "contactFirstName", "phone", "addressLine1", "addressLine2", "city", "state", "postalCode", "country", "salesRepEmployeeNumber", "creditLimit"]
+      },
+      {
+        "name": "employees",
+        "description": "Employee information and office assignments",
+        "columns": ["employeeNumber", "lastName", "firstName", "extension", "email", "officeCode", "reportsTo", "jobTitle"]
+      },
+      {
+        "name": "offices",
+        "description": "Office locations and contact information",
+        "columns": ["officeCode", "city", "phone", "addressLine1", "addressLine2", "state", "country", "postalCode", "territory"]
+      },
+      {
+        "name": "orders",
+        "description": "Customer orders and order details",
+        "columns": ["orderNumber", "orderDate", "requiredDate", "shippedDate", "status", "comments", "customerNumber"]
+      },
+      {
+        "name": "orderdetails",
+        "description": "Individual line items for each order",
+        "columns": ["orderNumber", "productCode", "quantityOrdered", "priceEach", "orderLineNumber"]
+      },
+      {
+        "name": "products",
+        "description": "Product catalog with pricing and categories",
+        "columns": ["productCode", "productName", "productLine", "productScale", "productVendor", "productDescription", "quantityInStock", "buyPrice", "MSRP"]
+      },
+      {
+        "name": "payments",
+        "description": "Customer payment records",
+        "columns": ["customerNumber", "checkNumber", "paymentDate", "amount"]
+      },
+      {
+        "name": "productlines",
+        "description": "Product line descriptions",
+        "columns": ["productLine", "textDescription", "htmlDescription", "image"]
+      }
+    ]
+  },
+  "world": {
+    "name": "World Database",
+    "description": "Geographic database with countries, cities, and languages",
+    "tables": [
+      {
+        "name": "country",
+        "description": "Country information including population, area, and government details",
+        "columns": ["Code", "Name", "Continent", "Region", "SurfaceArea", "IndepYear", "Population", "LifeExpectancy", "GNP", "GNPOld", "LocalName", "GovernmentForm", "HeadOfState", "Capital", "Code2"]
+      },
+      {
+        "name": "city",
+        "description": "City information with population and country code",
+        "columns": ["ID", "Name", "CountryCode", "District", "Population"]
+      },
+      {
+        "name": "countrylanguage",
+        "description": "Languages spoken in each country",
+        "columns": ["CountryCode", "Language", "IsOfficial", "Percentage"]
+      }
+    ]
+  }
+}
+

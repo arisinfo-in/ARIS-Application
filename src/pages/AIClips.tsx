@@ -1,5 +1,5 @@
 import React, { useState, memo } from 'react';
-import { ArrowLeft, Search, Play, Calendar, X, Volume2, Maximize2 } from 'lucide-react';
+import { ArrowLeft, Search, Play, Calendar, X, Maximize2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
@@ -10,7 +10,7 @@ interface VideoClip {
   description: string;
   duration: string;
   category: string;
-  videoPath: string;
+  youtubeId: string;
   thumbnail?: string;
   publishedAt: string;
 }
@@ -28,7 +28,7 @@ const AIClips: React.FC = () => {
       description: 'Latest breaking news in AI and analytics industry trends, market updates, and technological breakthroughs',
       duration: '12:45',
       category: 'ai',
-      videoPath: '/Vidoes/AI & Analytics.mp4',
+      youtubeId: 'DlHOQCci98w',
       publishedAt: new Date().toISOString()
     },
     {
@@ -37,7 +37,7 @@ const AIClips: React.FC = () => {
       description: 'Recent Excel feature announcements, productivity tips, and industry news for data analysts',
       duration: '15:30',
       category: 'excel',
-      videoPath: '/Vidoes/Excel.mp4',
+      youtubeId: '1ef6KgfZ_0A',
       publishedAt: new Date().toISOString()
     },
     {
@@ -46,7 +46,7 @@ const AIClips: React.FC = () => {
       description: 'Latest developments in machine learning, new algorithms, and industry applications',
       duration: '18:20',
       category: 'ml',
-      videoPath: '/Vidoes/Machine Learning.mp4',
+      youtubeId: 'lBfIK__Ii0s',
       publishedAt: new Date().toISOString()
     },
     {
@@ -55,7 +55,7 @@ const AIClips: React.FC = () => {
       description: 'Microsoft Power BI latest features, dashboard innovations, and business intelligence trends',
       duration: '14:15',
       category: 'powerbi',
-      videoPath: '/Vidoes/Power BI.mp4',
+      youtubeId: 'iKuswQzmaIM',
       publishedAt: new Date().toISOString()
     },
     {
@@ -64,7 +64,7 @@ const AIClips: React.FC = () => {
       description: 'Latest developments in AI prompt engineering, new techniques, and industry best practices',
       duration: '16:40',
       category: 'ai',
-      videoPath: '/Vidoes/Prompt Engineering.mp4',
+      youtubeId: 'DLXE-HgH694',
       publishedAt: new Date().toISOString()
     },
     {
@@ -73,7 +73,7 @@ const AIClips: React.FC = () => {
       description: 'Python ecosystem updates, new libraries, and data science community developments',
       duration: '20:25',
       category: 'python',
-      videoPath: '/Vidoes/Python.mp4',
+      youtubeId: 'IeLLDpAGu6o',
       publishedAt: new Date().toISOString()
     },
     {
@@ -82,7 +82,7 @@ const AIClips: React.FC = () => {
       description: 'Database technology updates, SQL innovations, and data management trends',
       duration: '17:50',
       category: 'sql',
-      videoPath: '/Vidoes/SQL & Database.mp4',
+      youtubeId: 'JOVEMQUsmBA',
       publishedAt: new Date().toISOString()
     },
     {
@@ -91,7 +91,7 @@ const AIClips: React.FC = () => {
       description: 'Latest developments in statistical methods, research findings, and analytical techniques',
       duration: '13:35',
       category: 'statistics',
-      videoPath: '/Vidoes/Statistics.mp4',
+      youtubeId: 'ER1-Jyx000o',
       publishedAt: new Date().toISOString()
     }
   ];
@@ -233,37 +233,23 @@ const AIClips: React.FC = () => {
               </div>
 
               {/* Video Player */}
-              <div className="relative">
-                <video
-                  controls
-                  className="w-full h-auto max-h-[60vh]"
-                  autoPlay
-                  onEnded={closeVideoPlayer}
-                >
-                  <source src={selectedVideo.videoPath} type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
+              <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  className="absolute top-0 left-0 w-full h-full rounded-lg"
+                  src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1&rel=0&modestbranding=1`}
+                  title={selectedVideo.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  frameBorder="0"
+                />
                 
                 {/* Video Controls Overlay */}
                 <div className="absolute bottom-4 right-4 flex gap-2">
                   <NeumorphicButton
                     onClick={() => {
-                      const video = document.querySelector('video');
-                      if (video) {
-                        video.muted = !video.muted;
-                      }
-                    }}
-                    className="p-2"
-                  >
-                    <Volume2 className="w-4 h-4" />
-                  </NeumorphicButton>
-                  <NeumorphicButton
-                    onClick={() => {
-                      const video = document.querySelector('video');
-                      if (video) {
-                        if (video.requestFullscreen) {
-                          video.requestFullscreen();
-                        }
+                      const iframe = document.querySelector('iframe');
+                      if (iframe && iframe.requestFullscreen) {
+                        iframe.requestFullscreen();
                       }
                     }}
                     className="p-2"

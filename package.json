@@ -10,16 +10,21 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@supabase/supabase-js": "^2.57.4",
     "@types/uuid": "^10.0.0",
     "date-fns": "^4.1.0",
     "firebase": "^12.3.0",
+    "jspdf": "^3.0.3",
     "lucide-react": "^0.344.0",
+    "monaco-editor": "^0.54.0",
     "node-fetch": "^3.3.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.9.1",
     "recharts": "^3.2.1",
+    "sql.js": "^1.8.0",
+    "pyodide": "^0.24.0",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

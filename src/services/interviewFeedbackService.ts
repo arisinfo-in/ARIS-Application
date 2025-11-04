@@ -43,7 +43,9 @@ class InterviewFeedbackService {
         practiceSuggestions: parsedFeedback.practiceSuggestions
       };
     } catch (error) {
-      console.error('Error generating detailed feedback:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error generating detailed feedback:', error);
+      }
       return this.getFallbackFeedback(analysisResult);
     }
   }
@@ -116,7 +118,9 @@ Focus on:
         };
       }
     } catch (error) {
-      console.error('Error parsing AI response:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error parsing AI response:', error);
+      }
     }
 
     // Fallback parsing

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Download, Share2, RotateCcw, TrendingUp, Target, CheckCircle, AlertCircle, Star, BarChart3, MessageSquare, Eye, Users } from 'lucide-react';
+import { ArrowLeft, Download, Share2, RotateCcw, TrendingUp, Target, CheckCircle, AlertCircle, Star, BarChart3, MessageSquare, Eye, Users, XCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
@@ -37,91 +37,257 @@ const InterviewResults: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
+  interface CompletedQuestion {
+    type: 'theory' | 'practical';
+    question: string;
+    result: {
+      question?: string | unknown;
+      speechResult?: {
+        technicalAccuracy?: { score: number };
+        fluency?: { speakingRate: number };
+        keywords?: string[];
+      };
+      transcript?: string;
+      code?: string;
+      validation?: { score: number };
+    };
+  }
+
+  const processMixedInterviewResults = useCallback(async (
+    completedQuestions: CompletedQuestion[],
+    difficulty: string
+  ) => {
+    setLoading(true);
+    try {
+      // Separate theory and practical results
+      const theoryResults = completedQuestions.filter(q => q.type === 'theory');
+      const practicalResults = completedQuestions.filter(q => q.type === 'practical');
+
+      // Calculate theory scores
+      const theoryScores = theoryResults.map(q => {
+        const techScore = q.result?.speechResult?.technicalAccuracy?.score || 7.5;
+        const commScore = (q.result?.speechResult?.fluency?.speakingRate || 0) / 15; // Normalize
+        return (techScore + commScore) / 2;
+      });
+      const avgTheoryScore = theoryScores.length > 0 
+        ? theoryScores.reduce((a, b) => a + b, 0) / theoryScores.length 
+        : 7.5;
+
+      // Calculate practical scores
+      const practicalScores = practicalResults.map(q => q.result?.validation?.score || 5);
+      const avgPracticalScore = practicalScores.length > 0
+        ? practicalScores.reduce((a, b) => a + b, 0) / practicalScores.length
+        : 5;
+
+      // Combined score (50/50 weight)
+      const overallScore = (avgTheoryScore * 0.5) + (avgPracticalScore * 0.5);
+
+      // Generate comprehensive report for mixed interview
+      const mixedReport: InterviewReport = {
+        id: `mixed-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        question: `Mixed Interview (${theoryResults.length} theory, ${practicalResults.length} practical)`,
+        difficulty,
+        scores: {
+          overall: Math.round(overallScore * 10) / 10,
+          categories: {
+            technicalKnowledge: Math.round(avgTheoryScore * 10) / 10,
+            communication: Math.round(avgTheoryScore * 10) / 10,
+            confidence: Math.round(avgPracticalScore * 10) / 10,
+            professionalism: Math.round((avgTheoryScore + avgPracticalScore) / 2 * 10) / 10
+          }
+        },
+        analysis: {
+          strengths: [
+            ...(avgTheoryScore >= 7 ? ['Strong theoretical understanding'] : []),
+            ...(avgPracticalScore >= 7 ? ['Good practical coding skills'] : []),
+            'Completed full mixed interview',
+            `Answered ${theoryResults.length} theory and ${practicalResults.length} practical questions`
+          ],
+          improvements: [
+            ...(avgTheoryScore < 7 ? ['Improve theoretical explanations'] : []),
+            ...(avgPracticalScore < 7 ? ['Practice more coding problems'] : []),
+            'Balance theory and practical knowledge'
+          ],
+          specificRecommendations: [
+            'Continue practicing both verbal communication and coding',
+            'Focus on connecting theory to practical applications',
+            'Review code validation feedback for improvement areas'
+          ]
+        },
+        nextSteps: [
+          'Practice more mock interviews',
+          'Focus on weak areas identified',
+          'Review practical question solutions'
+        ],
+        practiceSuggestions: [
+          'Mix theory and practical practice sessions',
+          'Work on explaining code solutions verbally',
+          'Practice SQL and Python problems regularly'
+        ],
+        rawData: {
+          speech: {
+            transcript: theoryResults.map(q => q.result?.transcript || q.question).join(' '),
+            confidence: 0.85,
+            keywords: Array.from(new Set(theoryResults.flatMap(q => q.result?.speechResult?.keywords || []))),
+            sentiment: { score: 0.3, label: 'positive' as const },
+            fluency: {
+              speakingRate: 125,
+              pauseCount: 3,
+              averagePauseLength: 1.2,
+              fillerWords: ['um', 'like']
+            },
+            technicalAccuracy: {
+              score: avgTheoryScore,
+              technicalTerms: Array.from(new Set(theoryResults.flatMap(q => q.result?.speechResult?.technicalAccuracy?.technicalTerms || []))),
+              missingKeywords: []
+            }
+          },
+          video: {
+            confidence: { score: 7.5, indicators: ['Good posture', 'Maintained eye contact'] },
+            posture: { score: 8.0, feedback: ['Sitting upright', 'Professional appearance'] },
+            eyeContact: { score: 7.0, percentage: 75 },
+            facialExpressions: { engagement: 8.5, professionalism: 8.0 }
+          },
+          overallScore: overallScore,
+          strengths: ['Completed mixed interview', 'Balanced theory and practical knowledge'],
+          improvements: ['Continue practicing', 'Improve weak areas'],
+          recommendations: ['Mix practice sessions', 'Focus on both aspects']
+        }
+      };
+
+      // Store detailed results for display
+      interface MixedResults {
+        theory: CompletedQuestion[];
+        practical: CompletedQuestion[];
+        theoryScore: number;
+        practicalScore: number;
+      }
+      
+      (mixedReport as InterviewReport & { mixedResults: MixedResults }).mixedResults = {
+        theory: theoryResults,
+        practical: practicalResults,
+        theoryScore: avgTheoryScore,
+        practicalScore: avgPracticalScore
+      };
+
+      setReport(mixedReport);
+    } catch (error) {
+      console.error('Error processing mixed interview results:', error);
+      setReport(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const simulateAnalysis = useCallback(async (question?: string, difficulty?: string) => {
     setLoading(true);
     try {
+      // Get location state - check if it's a mixed interview
+      const locationState = location.state as {
+        question?: string;
+        difficulty?: string;
+        recordingBlob?: Blob;
+        transcript?: string;
+        mixedInterview?: boolean;
+        completedQuestions?: CompletedQuestion[];
+        totalQuestions?: number;
+      } | null;
+
+      // Check if this is a mixed interview
+      if (locationState?.mixedInterview && locationState?.completedQuestions) {
+        // Handle mixed interview results
+        await processMixedInterviewResults(locationState.completedQuestions, locationState.difficulty || 'medium');
+        return;
+      }
+
       // Use provided question or default
-      const interviewQuestion = question || "Tell me about a data analysis project you worked on and its impact.";
-      const interviewDifficulty = difficulty || "medium";
-      
-      // Get recording blob from location state
-      const locationState = location.state as { question?: string; difficulty?: string; recordingBlob?: Blob } | null;
+      const interviewQuestion = question || locationState?.question || "Tell me about a data analysis project you worked on and its impact.";
+      const interviewDifficulty = difficulty || locationState?.difficulty || "medium";
       const recordingBlob = locationState?.recordingBlob;
+      const transcript = locationState?.transcript;
       
       let analysisResult: InterviewAnalysisResult;
       
-      if (recordingBlob) {
-        // Perform actual analysis on the recorded video
-        console.log('Analyzing recorded video...', recordingBlob);
+      // Prioritize transcript over video blob for more accurate analysis
+      if (transcript && transcript.trim().length > 0) {
+        console.log('Analyzing from transcript...', transcript);
         
         try {
-          // Use real speech analysis
+          const speechResult = await speechAnalysisService.analyzeSpeechFromTranscript(transcript, interviewQuestion, interviewDifficulty);
+          const videoResult = await speechAnalysisService.analyzeVideo(recordingBlob || new Blob());
+          analysisResult = await speechAnalysisService.generateComprehensiveFeedback(speechResult, videoResult, interviewQuestion, interviewDifficulty);
+        } catch (error) {
+          console.error('Error in transcript analysis, falling back to simulated data:', error);
+          analysisResult = {
+            speech: {
+              transcript: transcript || "I have experience working with data analysis using Excel and SQL.",
+              confidence: 0.85,
+              keywords: ['data', 'analysis', 'excel', 'sql'],
+              sentiment: { score: 0.3, label: 'positive' as const },
+              fluency: { speakingRate: 125, pauseCount: 3, averagePauseLength: 1.2, fillerWords: ['um'] },
+              technicalAccuracy: { score: 7.5, technicalTerms: ['data analysis'], missingKeywords: [] }
+            },
+            video: {
+              confidence: { score: 7.5, indicators: ['Good posture'] },
+              posture: { score: 8.0, feedback: ['Sitting upright'] },
+              eyeContact: { score: 7.0, percentage: 75 },
+              facialExpressions: { engagement: 8.5, professionalism: 8.0 }
+            },
+            overallScore: 7.8,
+            strengths: ['Strong technical knowledge'],
+            improvements: ['Include more specific examples'],
+            recommendations: ['Practice with STAR method']
+          };
+        }
+      } else if (recordingBlob) {
+        try {
           const speechResult = await speechAnalysisService.analyzeSpeech(recordingBlob, interviewQuestion, interviewDifficulty);
           const videoResult = await speechAnalysisService.analyzeVideo(recordingBlob);
           analysisResult = await speechAnalysisService.generateComprehensiveFeedback(speechResult, videoResult, interviewQuestion, interviewDifficulty);
         } catch (error) {
           console.error('Error in real analysis, falling back to simulated data:', error);
-          // Fallback to simulated data if real analysis fails
           analysisResult = {
-          speech: {
-            transcript: "I have experience working with data analysis using Excel and SQL. I've created dashboards and reports that helped stakeholders make informed decisions. I'm particularly interested in using Python for more advanced analytics and machine learning applications.",
-            confidence: 0.85,
-            keywords: ['data', 'analysis', 'excel', 'sql', 'dashboards', 'python', 'analytics'],
-            sentiment: { score: 0.3, label: 'positive' as const },
-            fluency: {
-              speakingRate: 125,
-              pauseCount: 3,
-              averagePauseLength: 1.2,
-              fillerWords: ['um', 'like']
+            speech: {
+              transcript: "I have experience working with data analysis using Excel and SQL.",
+              confidence: 0.85,
+              keywords: ['data', 'analysis'],
+              sentiment: { score: 0.3, label: 'positive' as const },
+              fluency: { speakingRate: 125, pauseCount: 3, averagePauseLength: 1.2, fillerWords: ['um'] },
+              technicalAccuracy: { score: 7.5, technicalTerms: ['data analysis'], missingKeywords: [] }
             },
-            technicalAccuracy: {
-              score: 7.5,
-              technicalTerms: ['data analysis', 'excel', 'sql', 'dashboards', 'python', 'analytics'],
-              missingKeywords: ['machine learning', 'statistics', 'visualization']
-            }
-          },
-          video: {
-            confidence: { score: 7.5, indicators: ['Good posture', 'Maintained eye contact'] },
-            posture: { score: 8.0, feedback: ['Sitting upright', 'Professional appearance'] },
-            eyeContact: { score: 7.0, percentage: 75 },
-            facialExpressions: { engagement: 8.5, professionalism: 8.0 }
-          },
-          overallScore: 7.8,
-          strengths: ['Strong technical knowledge', 'Good speaking pace', 'Professional presence'],
-          improvements: ['Include more specific examples', 'Reduce filler words', 'Maintain better eye contact'],
-          recommendations: ['Practice with STAR method', 'Prepare more technical examples', 'Record practice sessions']
-        };
+            video: {
+              confidence: { score: 7.5, indicators: ['Good posture'] },
+              posture: { score: 8.0, feedback: ['Sitting upright'] },
+              eyeContact: { score: 7.0, percentage: 75 },
+              facialExpressions: { engagement: 8.5, professionalism: 8.0 }
+            },
+            overallScore: 7.8,
+            strengths: ['Strong technical knowledge'],
+            improvements: ['Include more specific examples'],
+            recommendations: ['Practice with STAR method']
+          };
         }
       } else {
-        // Fallback to simulated data
         analysisResult = {
           speech: {
-            transcript: "I have experience working with data analysis using Excel and SQL. I've created dashboards and reports that helped stakeholders make informed decisions. I'm particularly interested in using Python for more advanced analytics and machine learning applications.",
+            transcript: "I have experience working with data analysis using Excel and SQL.",
             confidence: 0.85,
-            keywords: ['data', 'analysis', 'excel', 'sql', 'dashboards', 'python', 'analytics'],
+            keywords: ['data', 'analysis'],
             sentiment: { score: 0.3, label: 'positive' as const },
-            fluency: {
-              speakingRate: 125,
-              pauseCount: 3,
-              averagePauseLength: 1.2,
-              fillerWords: ['um', 'like']
-            },
-            technicalAccuracy: {
-              score: 7.5,
-              technicalTerms: ['data analysis', 'excel', 'sql', 'dashboards', 'python', 'analytics'],
-              missingKeywords: ['machine learning', 'statistics', 'visualization']
-            }
+            fluency: { speakingRate: 125, pauseCount: 3, averagePauseLength: 1.2, fillerWords: ['um'] },
+            technicalAccuracy: { score: 7.5, technicalTerms: ['data analysis'], missingKeywords: [] }
           },
           video: {
-            confidence: { score: 7.5, indicators: ['Good posture', 'Maintained eye contact'] },
-            posture: { score: 8.0, feedback: ['Sitting upright', 'Professional appearance'] },
+            confidence: { score: 7.5, indicators: ['Good posture'] },
+            posture: { score: 8.0, feedback: ['Sitting upright'] },
             eyeContact: { score: 7.0, percentage: 75 },
             facialExpressions: { engagement: 8.5, professionalism: 8.0 }
           },
           overallScore: 7.8,
-          strengths: ['Strong technical knowledge', 'Good speaking pace', 'Professional presence'],
-          improvements: ['Include more specific examples', 'Reduce filler words', 'Maintain better eye contact'],
-          recommendations: ['Practice with STAR method', 'Prepare more technical examples', 'Record practice sessions']
+          strengths: ['Strong technical knowledge'],
+          improvements: ['Include more specific examples'],
+          recommendations: ['Practice with STAR method']
         };
       }
 
@@ -138,12 +304,13 @@ const InterviewResults: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [location.state]);
+  }, [location.state, processMixedInterviewResults]);
 
   useEffect(() => {
-    // Get data from location state or simulate if not available
-    const locationState = location.state as { question?: string; difficulty?: string } | null;
-    if (locationState?.question && locationState?.difficulty) {
+    const locationState = location.state as { question?: string; difficulty?: string; mixedInterview?: boolean } | null;
+    if (locationState?.mixedInterview) {
+      simulateAnalysis();
+    } else if (locationState?.question && locationState?.difficulty) {
       simulateAnalysis(locationState.question, locationState.difficulty);
     } else {
       simulateAnalysis();
@@ -191,10 +358,20 @@ const InterviewResults: React.FC = () => {
     );
   }
 
+  interface MixedResults {
+    theory: CompletedQuestion[];
+    practical: CompletedQuestion[];
+    theoryScore: number;
+    practicalScore: number;
+  }
+  
+  const isMixedInterview = (report as InterviewReport & { mixedResults?: MixedResults })?.mixedResults;
+  
   const tabs = [
     { id: 'overview', name: 'Overview', icon: BarChart3 },
     { id: 'speech', name: 'Speech Analysis', icon: MessageSquare },
     { id: 'video', name: 'Video Analysis', icon: Eye },
+    ...(isMixedInterview ? [{ id: 'practical', name: 'Practical Results', icon: Target }] : []),
     { id: 'recommendations', name: 'Recommendations', icon: Target }
   ];
 
@@ -450,6 +627,123 @@ const InterviewResults: React.FC = () => {
     </div>
   );
 
+  const renderPracticalResults = () => {
+    const mixedResults = (report as InterviewReport & { mixedResults?: MixedResults })?.mixedResults;
+    if (!mixedResults) return null;
+
+    const { practical, practicalScore } = mixedResults;
+
+    return (
+      <div className="space-y-6">
+        {/* Practical Score Summary */}
+        <NeumorphicCard padding="lg">
+          <div className="text-center mb-6">
+            <h3 className="text-2xl font-bold text-gray-100 mb-4">Practical Coding Results</h3>
+            <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full ${getScoreBgColor(practicalScore)} mb-4`}>
+              <span className={`text-3xl font-bold ${getScoreColor(practicalScore)}`}>
+                {practicalScore.toFixed(1)}
+              </span>
+            </div>
+            <p className="text-gray-200 mb-2">Average Practical Score</p>
+            <p className="text-sm text-gray-400">
+              {practical.length} coding question{practical.length !== 1 ? 's' : ''} completed
+            </p>
+          </div>
+        </NeumorphicCard>
+
+        {/* Individual Practical Questions */}
+        {practical.map((q, index: number) => (
+          <NeumorphicCard key={index} padding="lg">
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-lg font-bold text-gray-100">Question {index + 1}</h4>
+                <span className={`text-xl font-bold ${getScoreColor(q.result?.validation?.score || 0)}`}>
+                  {(q.result?.validation?.score || 0).toFixed(1)}/10
+                </span>
+              </div>
+              <p className="text-gray-300 mb-4">{q.question}</p>
+            </div>
+
+            {/* User's Code */}
+            {q.result?.code && (
+              <div className="mb-4">
+                <h5 className="text-sm font-semibold text-gray-300 mb-2">Your Solution:</h5>
+                <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                  <pre className="text-sm text-gray-300 font-mono">
+                    <code>{q.result.code}</code>
+                  </pre>
+                </div>
+              </div>
+            )}
+
+            {/* Validation Results */}
+            {q.result?.validation && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 text-sm">
+                  <span className={`${q.result.validation.syntaxValid ? 'text-green-400' : 'text-red-400'}`}>
+                    Syntax: {q.result.validation.syntaxValid ? '✓ Valid' : '✗ Invalid'}
+                  </span>
+                  <span className={`${q.result.validation.logicCorrect ? 'text-green-400' : 'text-yellow-400'}`}>
+                    Logic: {q.result.validation.logicCorrect ? '✓ Correct' : '⚠ Needs Review'}
+                  </span>
+                </div>
+
+                {q.result.validation.feedback.length > 0 && (
+                  <div>
+                    <h5 className="text-sm font-semibold text-gray-300 mb-2">Feedback:</h5>
+                    <ul className="space-y-1">
+                      {q.result.validation.feedback.map((fb: string, i: number) => (
+                        <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                          <span className="text-orange-400 mt-1">•</span>
+                          <span>{fb}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {q.result.validation.suggestions.length > 0 && (
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                    <h5 className="text-sm font-semibold text-blue-400 mb-2">Suggestions:</h5>
+                    <ul className="space-y-1">
+                      {q.result.validation.suggestions.map((suggestion: string, i: number) => (
+                        <li key={i} className="text-sm text-blue-300">• {suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Test Case Results */}
+                {q.result.validation.testCaseResults && q.result.validation.testCaseResults.length > 0 && (
+                  <div>
+                    <h5 className="text-sm font-semibold text-gray-300 mb-2">Test Cases:</h5>
+                    <div className="space-y-2">
+                      {q.result.validation.testCaseResults.map((tc, i: number) => (
+                        <div key={i} className="flex items-start gap-2">
+                          {tc.passed ? (
+                            <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                          )}
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-300">{tc.testCase?.description || 'Test case'}</p>
+                            {tc.error && (
+                              <p className="text-xs text-red-400 mt-1">{tc.error}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </NeumorphicCard>
+        ))}
+      </div>
+    );
+  };
+
   const renderRecommendations = () => (
     <div className="space-y-6">
       {/* Strengths */}
@@ -613,6 +907,7 @@ const InterviewResults: React.FC = () => {
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'speech' && renderSpeechAnalysis()}
         {activeTab === 'video' && renderVideoAnalysis()}
+        {activeTab === 'practical' && isMixedInterview && renderPracticalResults()}
         {activeTab === 'recommendations' && renderRecommendations()}
       </div>
 

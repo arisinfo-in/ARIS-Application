@@ -122,7 +122,9 @@ class GeminiService {
 
       return data.choices[0].message.content;
     } catch (error) {
-      console.error('Error generating response:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error generating response:', error);
+      }
       throw new Error('Failed to get AI response. Please try again.');
     }
   }

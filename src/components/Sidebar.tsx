@@ -78,6 +78,7 @@ const Sidebar: React.FC = () => {
             <NavLink
               key={item.path}
               to={item.path}
+              end={item.path === '/study-plans'}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 ${
                   isActive

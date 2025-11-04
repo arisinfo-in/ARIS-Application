@@ -11,6 +11,8 @@ import Dashboard from './pages/Dashboard';
 import Tests from './pages/Tests';
 import StudyPlans from './pages/StudyPlans';
 import AITutor from './pages/AITutor';
+import SQLPractice from './pages/SQLPractice';
+import PythonNotebook from './pages/PythonNotebook';
 import TheHub from './pages/News';
 import ArticleView from './pages/ArticleView';
 import AllArticles from './pages/AllArticles';
@@ -147,6 +149,22 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <StudyPlans />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/study-plans/sql-practice"
+              element={
+                <ProtectedRoute>
+                  <SQLPractice />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/python-notebook"
+              element={
+                <ProtectedRoute>
+                  <PythonNotebook />
                 </ProtectedRoute>
               }
             />

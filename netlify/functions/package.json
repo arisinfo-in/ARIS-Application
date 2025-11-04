@@ -1,13 +1,15 @@
 {
   "name": "netlify-functions",
   "version": "1.0.0",
-  "description": "Netlify functions for job data",
+  "description": "Netlify functions for ARIS AI Data Analyst",
   "main": "index.js",
-  "dependencies": {},
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["netlify", "functions", "jobs"],
+  "keywords": ["netlify", "functions", "ai", "data-analyst"],
   "author": "",
   "license": "MIT"
 }

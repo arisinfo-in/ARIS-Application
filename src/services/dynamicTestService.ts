@@ -25,13 +25,17 @@ export const dynamicTestService = {
       const aiResponse = await geminiService.generateDynamicTest(systemPrompt);
       return this.parseGeminiResponse(aiResponse);
     } catch (error) {
-      console.error('Error generating dynamic test:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error generating dynamic test:', error);
+      }
       throw new Error('Failed to generate test questions');
     }
   },
 
   createSystemPrompt(request: DynamicTestRequest): string {
-    console.log('Creating system prompt with difficulty:', request.difficulty);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Creating system prompt with difficulty:', request.difficulty);
+    }
     return `You are an expert ${request.module} tutor. Generate ${request.questionCount} multiple-choice questions for a test titled "${request.title}".
 
 REQUIREMENTS:
@@ -106,7 +110,9 @@ GUIDELINES:
       
       return validatedQuestions;
     } catch (error) {
-      console.error('Error parsing Gemini response:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error parsing Gemini response:', error);
+      }
       throw new Error('Invalid response format from AI');
     }
   },

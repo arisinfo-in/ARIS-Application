@@ -40,7 +40,9 @@ class NewsService {
       
       return newArticles;
     } catch (error) {
-      console.error('Error fetching news:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error fetching news:', error);
+      }
       // Return cached news if available, otherwise return mock data
       const cachedNews = this.getCachedNews();
       return cachedNews?.articles || this.getMockNewsData();
@@ -63,7 +65,9 @@ class NewsService {
       
       return newArticles;
     } catch (error) {
-      console.error(`Error fetching news for module ${moduleId}:`, error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error(`Error fetching news for module ${moduleId}:`, error);
+      }
       // Return mock data as fallback
       return this.getMockModuleNews(moduleId);
     }
@@ -161,7 +165,9 @@ class NewsService {
         imageUrl: article.imageUrl || `https://via.placeholder.com/400x200/1f2937/ffffff?text=${encodeURIComponent(moduleInfo.name.substring(0, 20))}`
       }];
     } catch (error) {
-      console.error('Error parsing Gemini response:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error parsing Gemini response:', error);
+      }
       return this.getMockModuleNews(moduleId);
     }
   }
@@ -190,7 +196,9 @@ class NewsService {
       const data = await response.json();
       return data.articles || [];
     } catch (error) {
-      console.error('Error fetching news from Netlify function:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error fetching news from Netlify function:', error);
+      }
       return this.getMockNewsData();
     }
   }
@@ -257,7 +265,9 @@ class NewsService {
       const cached = localStorage.getItem(cacheKey);
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      console.error('Error reading cached module news:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error reading cached module news:', error);
+      }
       return null;
     }
   }
@@ -273,7 +283,9 @@ class NewsService {
       };
       localStorage.setItem(cacheKey, JSON.stringify(cacheData));
     } catch (error) {
-      console.error('Error caching module news:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error caching module news:', error);
+      }
     }
   }
 
@@ -285,7 +297,9 @@ class NewsService {
       const cached = localStorage.getItem(this.NEWS_CACHE_KEY);
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      console.error('Error reading cached news:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error reading cached news:', error);
+      }
       return null;
     }
   }
@@ -301,7 +315,9 @@ class NewsService {
       };
       localStorage.setItem(this.NEWS_CACHE_KEY, JSON.stringify(cacheData));
     } catch (error) {
-      console.error('Error caching news:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error caching news:', error);
+      }
     }
   }
 

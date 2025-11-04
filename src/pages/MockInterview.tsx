@@ -3,7 +3,12 @@ import { ArrowLeft, Video, VideoOff, Mic, Play, Square, RotateCcw, CheckCircle, 
 import { useNavigate } from 'react-router-dom';
 import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
-// import { speechAnalysisService } from '../services/speechAnalysisService';
+import QuestionTypeBadge from '../components/QuestionTypeBadge';
+import PracticalQuestionView from '../components/PracticalQuestionView';
+import { speechAnalysisService } from '../services/speechAnalysisService';
+import { practicalQuestionService, PracticalQuestion } from '../services/practicalQuestionService';
+import { codeValidationService, CodeValidationResult } from '../services/codeValidationService';
+import { theoryQuestionService } from '../services/theoryQuestionService';
 
 const MockInterview: React.FC = () => {
   const navigate = useNavigate();
@@ -11,6 +16,8 @@ const MockInterview: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+    const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const finalTranscriptRef = useRef<string>('');
   
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -24,6 +31,31 @@ const MockInterview: React.FC = () => {
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [liveTranscript, setLiveTranscript] = useState<string>('');
   const [isTranscribing, setIsTranscribing] = useState(false);
+
+  // Mixed interview state
+  const [currentQuestionType, setCurrentQuestionType] = useState<'theory' | 'practical' | null>(null);
+  const [currentPracticalQuestion, setCurrentPracticalQuestion] = useState<PracticalQuestion | null>(null);
+  // Removed unused userCode state - code is managed in PracticalQuestionView
+  const [codeValidationResult, setCodeValidationResult] = useState<CodeValidationResult | null>(null);
+  const [isGeneratingPractical, setIsGeneratingPractical] = useState(false);
+  const [isGeneratingTheory, setIsGeneratingTheory] = useState(false);
+  const [isValidatingCode, setIsValidatingCode] = useState(false);
+  interface CompletedQuestion {
+    type: 'theory' | 'practical';
+    question: string;
+    result: {
+      question?: string | PracticalQuestion;
+      speechResult?: unknown;
+      transcript?: string;
+      code?: string;
+      validation?: CodeValidationResult;
+    };
+  }
+  
+  const [completedQuestions, setCompletedQuestions] = useState<CompletedQuestion[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [totalQuestions, setTotalQuestions] = useState(2); // 1 theory + 1 practical
+  // Removed unused selectedModule state - module is detected dynamically
 
   const interviewQuestions = {
     easy: [
@@ -172,6 +204,7 @@ const MockInterview: React.FC = () => {
     setIsAnalyzing(false);
     setLiveTranscript('');
     setIsTranscribing(false);
+    finalTranscriptRef.current = '';
     chunksRef.current = [];
     // Stop camera when resetting
     stopCamera();
@@ -187,17 +220,18 @@ const MockInterview: React.FC = () => {
 
     const SpeechRecognition = (window as { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).SpeechRecognition || (window as { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
     
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
-    let finalTranscript = '';
+    finalTranscriptRef.current = '';
 
     recognition.onstart = () => {
       setIsTranscribing(true);
       setLiveTranscript('');
-      finalTranscript = '';
+      finalTranscriptRef.current = '';
     };
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -206,14 +240,15 @@ const MockInterview: React.FC = () => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += transcript + ' ';
+          finalTranscriptRef.current += transcript + ' ';
         } else {
           interimTranscript += transcript;
         }
       }
 
-      // Only show final transcript + current interim transcript
-      setLiveTranscript(finalTranscript + interimTranscript);
+      // Update both state and ref
+      const fullTranscript = finalTranscriptRef.current + interimTranscript;
+      setLiveTranscript(fullTranscript);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -223,35 +258,227 @@ const MockInterview: React.FC = () => {
 
     recognition.onend = () => {
       setIsTranscribing(false);
+      // Ensure final transcript is preserved
+      if (finalTranscriptRef.current.trim().length > 0) {
+        setLiveTranscript(finalTranscriptRef.current.trim());
+      }
     };
 
     recognition.start();
   };
 
   const stopLiveTranscription = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.log('Recognition already stopped');
+      }
+      recognitionRef.current = null;
+    }
     setIsTranscribing(false);
+    // Ensure final transcript is preserved in state
+    if (finalTranscriptRef.current.trim().length > 0 && !liveTranscript.trim()) {
+      setLiveTranscript(finalTranscriptRef.current.trim());
+    }
   };
 
-  const analyzeRecording = async () => {
+  const analyzeTheoryResponse = async () => {
     if (!recordedBlob || !currentQuestion) return;
 
     setIsAnalyzing(true);
     try {
-      // Simulate analysis process
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Ensure we have the final transcript (use ref if state is empty)
+      const finalTranscript = liveTranscript.trim() || finalTranscriptRef.current.trim();
       
-      // Navigate to results page
-      navigate('/news/job-kit/interview-results', {
-        state: {
-          question: currentQuestion,
-          difficulty: selectedLevel,
-          recordingBlob: recordedBlob
-        }
-      });
+      if (!finalTranscript) {
+        alert('No transcript available. Please record your answer.');
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // Analyze the theory response
+      const speechResult = await speechAnalysisService.analyzeSpeechFromTranscript(
+        finalTranscript,
+        currentQuestion,
+        selectedLevel
+      );
+
+      // Store theory question result
+      const theoryResult = {
+        question: currentQuestion,
+        speechResult,
+        transcript: finalTranscript
+      };
+
+      setCompletedQuestions(prev => [...prev, {
+        type: 'theory',
+        question: currentQuestion,
+        result: theoryResult
+      }]);
+
+      // Extract technical terms for practical question generation
+      const technicalTerms = speechResult.technicalAccuracy.technicalTerms || [];
+      
+      // Determine module from question context
+      const detectedModule = detectModuleFromQuestion(currentQuestion, technicalTerms);
+
+      // Generate practical question based on theory response
+      setIsGeneratingPractical(true);
+      try {
+        const practicalQuestion = await practicalQuestionService.generatePracticalQuestion(
+          currentQuestion,
+          finalTranscript,
+          detectedModule,
+          selectedLevel,
+          technicalTerms
+        );
+
+        setCurrentPracticalQuestion(practicalQuestion);
+        setCurrentQuestionType('practical');
+        setCurrentQuestionIndex(prev => prev + 1);
+      } catch (error) {
+        console.error('Error generating practical question:', error);
+        // Fallback: continue to next theory question or end interview
+        proceedToNextQuestion();
+      } finally {
+        setIsGeneratingPractical(false);
+        setIsAnalyzing(false);
+        resetRecording();
+      }
     } catch (error) {
-      console.error('Error analyzing recording:', error);
+      console.error('Error analyzing theory response:', error);
       setIsAnalyzing(false);
+      // Show user-friendly error
+      alert('Error analyzing your response. Please try again.');
     }
+  };
+
+  const detectModuleFromQuestion = (question: string, technicalTerms: string[]): string => {
+    const questionLower = question.toLowerCase();
+    const termsLower = technicalTerms.join(' ').toLowerCase();
+
+    // Check for Excel first (more specific)
+    if (questionLower.includes('excel') || termsLower.includes('excel') || 
+        termsLower.includes('pivot') || termsLower.includes('vlookup') ||
+        termsLower.includes('formula') || questionLower.includes('spreadsheet')) {
+      return 'excel';
+    }
+    
+    // Check for Python
+    if (questionLower.includes('python') || termsLower.includes('python') || 
+        termsLower.includes('pandas') || termsLower.includes('dataframe') ||
+        termsLower.includes('numpy') || termsLower.includes('matplotlib')) {
+      return 'python';
+    }
+    
+    // Check for SQL
+    if (questionLower.includes('sql') || termsLower.includes('sql') || 
+        termsLower.includes('query') || termsLower.includes('database') ||
+        termsLower.includes('join') || termsLower.includes('select')) {
+      return 'sql';
+    }
+    
+    // Try to detect from technical terms more carefully
+    if (technicalTerms.length > 0) {
+      const allTerms = technicalTerms.join(' ').toLowerCase();
+      if (allTerms.includes('excel') || allTerms.includes('pivot')) return 'excel';
+      if (allTerms.includes('python') || allTerms.includes('pandas')) return 'python';
+      if (allTerms.includes('sql') || allTerms.includes('query')) return 'sql';
+    }
+    
+    // Default based on question context - don't default to SQL blindly
+    // If no clear indication, we'll let the API decide or use a balanced approach
+    return 'sql'; // Final fallback - but this should rarely happen
+  };
+
+  const handleCodeSubmit = async (code: string) => {
+    if (!currentPracticalQuestion) return;
+
+    setIsValidatingCode(true);
+    try {
+      const validationResult = await codeValidationService.validateCode(
+        code,
+        currentPracticalQuestion,
+        currentPracticalQuestion.module
+      );
+
+      setCodeValidationResult(validationResult);
+      setUserCode(code);
+
+      // Store practical question result
+      setCompletedQuestions(prev => [...prev, {
+        type: 'practical',
+        question: currentPracticalQuestion.question,
+        result: {
+          question: currentPracticalQuestion,
+          code,
+          validation: validationResult
+        }
+      }]);
+
+      setCurrentQuestionIndex(prev => prev + 1);
+
+      // Check if interview is complete
+      if (currentQuestionIndex + 1 >= totalQuestions) {
+        // Interview complete - navigate to results
+        finishInterview();
+      } else {
+        // Continue to next question (theory)
+        proceedToNextQuestion();
+      }
+    } catch (error) {
+      console.error('Error validating code:', error);
+      alert('Error validating code. Please try again.');
+    } finally {
+      setIsValidatingCode(false);
+    }
+  };
+
+  const proceedToNextQuestion = async () => {
+    // Reset for next question
+    setCurrentQuestionType('theory');
+    setCurrentPracticalQuestion(null);
+    setCodeValidationResult(null);
+    setUserCode('');
+    resetRecording();
+    
+    // Generate next theory question dynamically (avoiding previous questions)
+    const previousQuestions = completedQuestions
+      .filter(q => q.type === 'theory')
+      .map(q => q.question);
+    
+    setIsGeneratingTheory(true);
+    try {
+      const theoryQuestion = await theoryQuestionService.generateTheoryQuestion(
+        selectedLevel as 'easy' | 'medium' | 'hard',
+        previousQuestions
+      );
+      setCurrentQuestion(theoryQuestion.question);
+    } catch (error) {
+      console.error('Error generating theory question:', error);
+      // Fallback to hardcoded questions
+      const questions = interviewQuestions[selectedLevel as keyof typeof interviewQuestions];
+      const availableQuestions = questions.filter(q => !previousQuestions.includes(q));
+      const randomQuestion = availableQuestions.length > 0
+        ? availableQuestions[Math.floor(Math.random() * availableQuestions.length)]
+        : questions[Math.floor(Math.random() * questions.length)];
+      setCurrentQuestion(randomQuestion);
+    } finally {
+      setIsGeneratingTheory(false);
+    }
+  };
+
+  const finishInterview = () => {
+    // Navigate to results with all completed questions
+    navigate('/news/job-kit/interview-results', {
+      state: {
+        completedQuestions,
+        difficulty: selectedLevel,
+        totalQuestions,
+        mixedInterview: true
+      }
+    });
   };
 
   // Cleanup on component unmount
@@ -261,11 +488,29 @@ const MockInterview: React.FC = () => {
     };
   }, []);
 
-  const startInterview = () => {
-    const questions = interviewQuestions[selectedLevel as keyof typeof interviewQuestions];
-    const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
-    setCurrentQuestion(randomQuestion);
+  const startInterview = async () => {
     setShowQuestion(true);
+    setCurrentQuestionType('theory');
+    setCurrentQuestionIndex(0);
+    setCompletedQuestions([]);
+    setTotalQuestions(2); // 1 theory + 1 practical
+    
+    // Generate first theory question dynamically
+    setIsGeneratingTheory(true);
+    try {
+      const theoryQuestion = await theoryQuestionService.generateTheoryQuestion(
+        selectedLevel as 'easy' | 'medium' | 'hard'
+      );
+      setCurrentQuestion(theoryQuestion.question);
+    } catch (error) {
+      console.error('Error generating theory question:', error);
+      // Fallback to hardcoded questions
+      const questions = interviewQuestions[selectedLevel as keyof typeof interviewQuestions];
+      const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+      setCurrentQuestion(randomQuestion);
+    } finally {
+      setIsGeneratingTheory(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -382,30 +627,163 @@ const MockInterview: React.FC = () => {
         </div>
       ) : (
         /* Interview Interface */
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Question Panel */}
-          <div>
-            <NeumorphicCard padding="lg" className="h-full">
-              <h2 className="text-2xl font-bold text-gray-100 mb-6">Interview Question</h2>
-              <div className="bg-gray-800/50 rounded-lg p-6 mb-6">
-                <p className="text-gray-200 text-lg leading-relaxed">
-                  {currentQuestion}
-                </p>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm text-gray-300">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                  <span>Difficulty: {levels.find(l => l.id === selectedLevel)?.name}</span>
+        <>
+          {/* Progress Indicator */}
+          <div className="mb-6">
+            <NeumorphicCard padding="lg">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-100 mb-2">Interview Progress</h3>
+                  <p className="text-sm text-gray-300">
+                    Question {currentQuestionIndex + 1} of {totalQuestions}
+                  </p>
                 </div>
-                
-                <div className="flex items-center gap-2 text-sm text-gray-300">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span>Take your time to think before answering</span>
+                <div className="w-48 bg-gray-700 rounded-full h-3">
+                  <div
+                    className="bg-gradient-to-r from-orange-400 to-orange-500 h-3 rounded-full transition-all duration-300"
+                    style={{ width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%` }}
+                  ></div>
                 </div>
               </div>
             </NeumorphicCard>
           </div>
+
+          {/* Practical Question View */}
+          {currentQuestionType === 'practical' && currentPracticalQuestion ? (
+            <div className="space-y-6">
+              {isGeneratingPractical ? (
+                <NeumorphicCard padding="xl" className="text-center">
+                  <Loader className="w-8 h-8 animate-spin text-orange-400 mx-auto mb-4" />
+                  <p className="text-gray-200">Generating practical question based on your response...</p>
+                  <p className="text-sm text-gray-400 mt-2">This may take a few seconds</p>
+                </NeumorphicCard>
+              ) : (
+                <>
+                  <PracticalQuestionView
+                    question={currentPracticalQuestion}
+                    onSubmit={handleCodeSubmit}
+                    isSubmitting={isValidatingCode}
+                    onCancel={() => {
+                      if (confirm('Are you sure you want to skip this practical question?')) {
+                        proceedToNextQuestion();
+                      }
+                    }}
+                  />
+                  
+                  {/* Validation Results */}
+                  {codeValidationResult && (
+                    <NeumorphicCard padding="lg">
+                      <h3 className="text-xl font-bold text-gray-100 mb-4 flex items-center gap-2">
+                        {codeValidationResult.logicCorrect ? (
+                          <CheckCircle className="w-6 h-6 text-green-400" />
+                        ) : (
+                          <AlertCircle className="w-6 h-6 text-yellow-400" />
+                        )}
+                        Validation Results
+                      </h3>
+                      
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-gray-300">Score:</span>
+                          <span className={`text-2xl font-bold ${
+                            codeValidationResult.score >= 7 ? 'text-green-400' :
+                            codeValidationResult.score >= 5 ? 'text-yellow-400' : 'text-red-400'
+                          }`}>
+                            {codeValidationResult.score.toFixed(1)}/10
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-400">
+                          <span>Syntax: {codeValidationResult.syntaxValid ? '✓ Valid' : '✗ Invalid'}</span>
+                          <span>Logic: {codeValidationResult.logicCorrect ? '✓ Correct' : '⚠ Needs Review'}</span>
+                        </div>
+                      </div>
+
+                      {codeValidationResult.feedback.length > 0 && (
+                        <div className="mb-4">
+                          <h4 className="text-sm font-semibold text-gray-300 mb-2">Feedback:</h4>
+                          <ul className="space-y-1">
+                            {codeValidationResult.feedback.map((fb, i) => (
+                              <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                                <span className="text-orange-400 mt-1">•</span>
+                                <span>{fb}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {codeValidationResult.suggestions.length > 0 && (
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                          <h4 className="text-sm font-semibold text-blue-400 mb-2">Suggestions:</h4>
+                          <ul className="space-y-1">
+                            {codeValidationResult.suggestions.map((suggestion, i) => (
+                              <li key={i} className="text-sm text-blue-300">• {suggestion}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      <div className="mt-4">
+                        <NeumorphicButton
+                          variant="accent"
+                          onClick={() => {
+                            if (currentQuestionIndex + 1 >= totalQuestions) {
+                              finishInterview();
+                            } else {
+                              proceedToNextQuestion();
+                            }
+                          }}
+                          className="w-full"
+                        >
+                          {currentQuestionIndex + 1 >= totalQuestions ? 'Finish Interview' : 'Continue to Next Question'}
+                        </NeumorphicButton>
+                      </div>
+                    </NeumorphicCard>
+                  )}
+                </>
+              )}
+            </div>
+          ) : (
+            /* Theory Question View */
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Question Panel */}
+              <div>
+                <NeumorphicCard padding="lg" className="h-full">
+                  <div className="mb-4">
+                    <QuestionTypeBadge type="theory" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-100 mb-6">Interview Question</h2>
+                  {isGeneratingTheory ? (
+                    <div className="bg-gray-800/50 rounded-lg p-6 mb-6 text-center">
+                      <Loader className="w-8 h-8 animate-spin text-orange-400 mx-auto mb-4" />
+                      <p className="text-gray-200">Generating personalized question...</p>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-800/50 rounded-lg p-6 mb-6">
+                      <p className="text-gray-200 text-lg leading-relaxed">
+                        {currentQuestion || 'Loading question...'}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-300">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span>Difficulty: {levels.find(l => l.id === selectedLevel)?.name}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-sm text-gray-300">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span>Take your time to think before answering</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-sm text-gray-300">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <span>After this, you'll get a practical coding question</span>
+                    </div>
+                  </div>
+                </NeumorphicCard>
+              </div>
 
           {/* Video Recording Panel */}
           <div>
@@ -512,12 +890,12 @@ const MockInterview: React.FC = () => {
                       </NeumorphicButton>
                       <NeumorphicButton
                         variant="accent"
-                        onClick={analyzeRecording}
-                        disabled={isAnalyzing}
+                        onClick={analyzeTheoryResponse}
+                        disabled={isAnalyzing || isGeneratingPractical}
                         className="flex-1"
-                        icon={isAnalyzing ? Loader : CheckCircle}
+                        icon={isAnalyzing || isGeneratingPractical ? Loader : CheckCircle}
                       >
-                        {isAnalyzing ? 'Analyzing...' : 'Analyze Response'}
+                        {isAnalyzing ? 'Analyzing...' : isGeneratingPractical ? 'Generating Practical Question...' : 'Submit & Continue'}
                       </NeumorphicButton>
                     </div>
                   </div>
@@ -538,6 +916,8 @@ const MockInterview: React.FC = () => {
             </NeumorphicCard>
           </div>
         </div>
+          )}
+        </>
       )}
     </div>
   );

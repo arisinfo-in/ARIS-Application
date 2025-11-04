@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
-import { Plus, Calendar, Target, CheckCircle, Circle, Trash2, MessageSquare, Trophy, FileSpreadsheet, BarChart3, Database, Code, TrendingUp, Brain, Zap } from 'lucide-react';
+import { Plus, Calendar, Target, CheckCircle, Circle, Trash2, MessageSquare, Trophy, FileSpreadsheet, BarChart3, Database, Code, TrendingUp, Brain, Zap, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
 import { useAuth } from '../contexts/AuthContext';
-import { firestoreOperations, StudyPlan } from '../firebase/firestore';
+import { firestoreOperations, StudyPlan, TestAttempt } from '../firebase/firestore';
+import { validateStudyPlan } from '../utils/validation';
 import { format, addDays } from 'date-fns';
 
 const StudyPlans: React.FC = () => {
@@ -12,6 +13,8 @@ const StudyPlans: React.FC = () => {
   const navigate = useNavigate();
   const [studyPlans, setStudyPlans] = useState<StudyPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newPlanTitle, setNewPlanTitle] = useState('');
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
@@ -19,20 +22,43 @@ const StudyPlans: React.FC = () => {
   const [planType, setPlanType] = useState<string>('beginner');
   const [isGeneratingRecommendation, setIsGeneratingRecommendation] = useState(false);
 
+  // Module names - moved before analyzePerformanceAndRecommend
+  const moduleNames = {
+    excel: 'Microsoft Excel',
+    powerbi: 'Power BI',
+    sql: 'SQL & Database',
+    python: 'Python',
+    statistics: 'Statistics',
+    ml: 'Machine Learning',
+    prompt: 'Prompt Engineering',
+    advanced: 'Advanced AI'
+  };
+
   const loadStudyPlans = useCallback(async () => {
     if (!user) return;
     
-    setLoading(false); // Set loading to false immediately
+    setLoading(true);
+    setError(null);
     try {
       const plans = await firestoreOperations.getUserStudyPlans(user.uid);
       setStudyPlans(plans);
     } catch (error) {
       console.error('Error loading study plans:', error);
+      setError('Failed to load study plans. Please try again.');
+    } finally {
+      // Ensure loading state is cleared even if component unmounts
+      setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
+    // Load study plans
     loadStudyPlans();
+    
+    return () => {
+      // Cancel loading if component unmounts during navigation
+      setLoading(false);
+    };
   }, [loadStudyPlans]);
 
 
@@ -40,13 +66,40 @@ const StudyPlans: React.FC = () => {
     if (!user) return;
 
     setIsGeneratingRecommendation(true);
+    setError(null);
+    setSuccessMessage(null);
     try {
       // Get user's test attempts to analyze performance
       const testAttempts = await firestoreOperations.getUserTestAttempts(user.uid);
       
-      // Analyze performance and create recommendations
-      const recommendations = analyzePerformanceAndRecommend(testAttempts);
+      // Handle case when user has no test attempts
+      if (testAttempts.length === 0) {
+        setError('No test attempts found. Please take some tests first to get personalized recommendations.');
+        setIsGeneratingRecommendation(false);
+        return;
+      }
+
+      // Transform TestAttempt[] to expected format
+      const attemptsWithModule = testAttempts.map((attempt: TestAttempt) => {
+        // Extract module from testId (format: module-testId or just module)
+        const module = attempt.testId?.split('-')[0] || 'general';
+        return {
+          module,
+          score: attempt.score,
+          testId: attempt.testId
+        };
+      });
       
+      // Analyze performance and create recommendations
+      const recommendations = analyzePerformanceAndRecommend(attemptsWithModule);
+      
+      // Ensure we have at least one recommended module
+      if (recommendations.schedule.length === 0) {
+        setError('Unable to generate recommendations. Please try creating a custom plan.');
+        setIsGeneratingRecommendation(false);
+        return;
+      }
+
       const recommendedPlan: Omit<StudyPlan, 'id'> = {
         userId: user.uid,
         title: recommendations.title,
@@ -55,21 +108,36 @@ const StudyPlans: React.FC = () => {
         createdAt: new Date().toISOString()
       };
 
+      // Validate before creating
+      const validation = validateStudyPlan({
+        title: recommendedPlan.title,
+        schedule: recommendedPlan.schedule
+      });
+
+      if (!validation.isValid) {
+        setError(validation.errors.join(', '));
+        setIsGeneratingRecommendation(false);
+        return;
+      }
+
       await firestoreOperations.createStudyPlan(recommendedPlan);
+      setSuccessMessage('Recommended study plan created successfully!');
+      setTimeout(() => setSuccessMessage(null), 3000);
       loadStudyPlans();
     } catch (error) {
       console.error('Error creating recommended plan:', error);
+      setError('Failed to create recommended plan. Please try again.');
     } finally {
       setIsGeneratingRecommendation(false);
     }
   };
 
-  const analyzePerformanceAndRecommend = (testAttempts: Array<{ module: string; score: number }>) => {
+  const analyzePerformanceAndRecommend = (testAttempts: Array<{ module: string; score: number; testId?: string }>) => {
     // Analyze test performance by module
     const modulePerformance: { [key: string]: { scores: number[], count: number } } = {};
     
     testAttempts.forEach(attempt => {
-      const module = attempt.testId?.split('-')[0] || 'general';
+      const module = attempt.module || 'general';
       if (!modulePerformance[module]) {
         modulePerformance[module] = { scores: [], count: 0 };
       }
@@ -151,6 +219,13 @@ const StudyPlans: React.FC = () => {
       }
     }
 
+    // Ensure we have at least one module
+    if (recommendedModules.length === 0) {
+      recommendedModules = ['excel', 'statistics', 'sql'];
+      planTitle = 'Foundation Building Plan';
+      duration = 14;
+    }
+
     // Create schedule with recommended modules
     const schedule = recommendedModules.map((module, index) => ({
       module,
@@ -172,11 +247,14 @@ const StudyPlans: React.FC = () => {
     if (!plan) return;
 
     const updatedSchedule = [...plan.schedule];
+    if (scheduleIndex < 0 || scheduleIndex >= updatedSchedule.length) return;
+    
     updatedSchedule[scheduleIndex].completed = !updatedSchedule[scheduleIndex].completed;
 
     const completedCount = updatedSchedule.filter(item => item.completed).length;
     const progressPercent = Math.round((completedCount / updatedSchedule.length) * 100);
 
+    setError(null);
     try {
       await firestoreOperations.updateStudyPlan(planId, {
         schedule: updatedSchedule,
@@ -185,17 +263,23 @@ const StudyPlans: React.FC = () => {
       loadStudyPlans();
     } catch (error) {
       console.error('Error updating study plan:', error);
+      setError('Failed to update study plan. Please try again.');
     }
   };
 
   const deleteStudyPlan = async (planId: string) => {
     if (!window.confirm('Are you sure you want to delete this study plan?')) return;
 
+    setError(null);
+    setSuccessMessage(null);
     try {
       await firestoreOperations.deleteStudyPlan(planId);
+      setSuccessMessage('Study plan deleted successfully.');
+      setTimeout(() => setSuccessMessage(null), 3000);
       loadStudyPlans();
     } catch (error) {
       console.error('Error deleting study plan:', error);
+      setError('Failed to delete study plan. Please try again.');
     }
   };
 
@@ -217,8 +301,24 @@ const StudyPlans: React.FC = () => {
       createdAt: new Date().toISOString()
     };
 
+    // Validate before creating
+    const validation = validateStudyPlan({
+      title: newPlan.title,
+      schedule: newPlan.schedule
+    });
+
+    setError(null);
+    setSuccessMessage(null);
+
+    if (!validation.isValid) {
+      setError(validation.errors.join(', '));
+      return;
+    }
+
     try {
       await firestoreOperations.createStudyPlan(newPlan);
+      setSuccessMessage('Study plan created successfully!');
+      setTimeout(() => setSuccessMessage(null), 3000);
       setNewPlanTitle('');
       setSelectedModules([]);
       setPlanDuration(7);
@@ -227,18 +327,8 @@ const StudyPlans: React.FC = () => {
       loadStudyPlans();
     } catch (error) {
       console.error('Error creating study plan:', error);
+      setError('Failed to create study plan. Please try again.');
     }
-  };
-
-  const moduleNames = {
-    excel: 'Microsoft Excel',
-    powerbi: 'Power BI',
-    sql: 'SQL & Database',
-    python: 'Python',
-    statistics: 'Statistics',
-    ml: 'Machine Learning',
-    prompt: 'Prompt Engineering',
-    advanced: 'Advanced AI'
   };
 
   // Module icons for quick actions
@@ -258,8 +348,17 @@ const StudyPlans: React.FC = () => {
     navigate(`/tutor/${module}`);
   };
 
-  const handlePracticeTestClick = (module: string) => {
+  const handlePracticeTestClick = () => {
     navigate('/tests');
+  };
+
+  const handleSQLPracticeClick = (planId: string, scheduleIndex: number) => {
+    navigate('/study-plans/sql-practice', {
+      state: {
+        planId,
+        scheduleIndex
+      }
+    });
   };
 
   const planTypeTemplates = {
@@ -310,12 +409,12 @@ const StudyPlans: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="p-6 max-w-6xl mx-auto">
         <div className="animate-pulse space-y-6">
-          <div className="h-32 bg-gray-200 rounded-2xl"></div>
+          <div className="h-32 bg-gray-800/50 rounded-2xl"></div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {[1, 2].map((i) => (
-              <div key={i} className="h-96 bg-gray-200 rounded-2xl"></div>
+              <div key={i} className="h-96 bg-gray-800/50 rounded-2xl"></div>
             ))}
           </div>
         </div>
@@ -325,6 +424,26 @@ const StudyPlans: React.FC = () => {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
+      {/* Error Message */}
+      {error && (
+        <NeumorphicCard padding="md" className="mb-6 bg-red-500/10 border border-red-500/20">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        </NeumorphicCard>
+      )}
+
+      {/* Success Message */}
+      {successMessage && (
+        <NeumorphicCard padding="md" className="mb-6 bg-green-500/10 border border-green-500/20">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+            <p className="text-green-400 text-sm">{successMessage}</p>
+          </div>
+        </NeumorphicCard>
+      )}
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -587,12 +706,26 @@ const StudyPlans: React.FC = () => {
                             <ModuleIcon className="w-3 h-3 mr-1" />
                             AI Tutor
                           </NeumorphicButton>
+                          {item.module === 'sql' && (
+                            <NeumorphicButton
+                              size="sm"
+                              variant="accent"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSQLPracticeClick(plan.id, index);
+                              }}
+                              icon={Database}
+                              className="text-xs"
+                            >
+                              Practice SQL
+                            </NeumorphicButton>
+                          )}
                           <NeumorphicButton
                             size="sm"
                             variant="secondary"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handlePracticeTestClick(item.module);
+                              handlePracticeTestClick();
                             }}
                             icon={Trophy}
                             className="text-xs"

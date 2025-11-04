@@ -1,16 +1,22 @@
 import React, { useState, useEffect, memo } from 'react';
-import { BookOpen, Calendar, Target, Clock, Star, Trophy } from 'lucide-react';
+import { BookOpen, Calendar, Target, Clock, Star, Trophy, Database, Code } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import NeumorphicCard from '../components/NeumorphicCard';
+import NeumorphicButton from '../components/NeumorphicButton';
 import { useAuth } from '../contexts/AuthContext';
-import { TestAttempt, StudyPlan } from '../firebase/firestore';
+import { TestAttempt, StudyPlan, AISession } from '../firebase/firestore';
 import { format } from 'date-fns';
 import { onSnapshot, query, collection, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [testAttempts, setTestAttempts] = useState<TestAttempt[]>([]);
   const [studyPlans, setStudyPlans] = useState<StudyPlan[]>([]);
+  const [aiSessions, setAISessions] = useState<AISession[]>([]);
+  const [userQueries, setUserQueries] = useState<any[]>([]);
+  const [pythonNotebooks, setPythonNotebooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,7 +41,9 @@ const Dashboard: React.FC = () => {
       })) as TestAttempt[];
       setTestAttempts(attempts);
     }, (error) => {
-      console.error('Error listening to test attempts:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error listening to test attempts:', error);
+      }
     });
 
     // Real-time listener for study plans
@@ -53,30 +61,128 @@ const Dashboard: React.FC = () => {
       plans.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setStudyPlans(plans);
     }, (error) => {
-      console.error('Error listening to study plans:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error listening to study plans:', error);
+      }
+    });
+
+    // Real-time listener for AI Sessions
+    const aiSessionsQuery = query(
+      collection(db, 'aiSessions'),
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribeAISessions = onSnapshot(aiSessionsQuery, (snapshot) => {
+      const sessions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as AISession[];
+      setAISessions(sessions);
+    }, (error) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error listening to AI sessions:', error);
+      }
+    });
+
+    // Real-time listener for SQL Queries
+    const userQueriesQuery = query(
+      collection(db, 'userQueries'),
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribeUserQueries = onSnapshot(userQueriesQuery, (snapshot) => {
+      const queries = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setUserQueries(queries);
+    }, (error) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error listening to user queries:', error);
+      }
+    });
+
+    // Real-time listener for Python Notebooks
+    const pythonNotebooksQuery = query(
+      collection(db, 'pythonNotebooks'),
+      where('userId', '==', user.uid),
+      orderBy('updatedAt', 'desc')
+    );
+
+    const unsubscribePythonNotebooks = onSnapshot(pythonNotebooksQuery, (snapshot) => {
+      const notebooks = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setPythonNotebooks(notebooks);
+    }, (error) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error listening to Python notebooks:', error);
+      }
     });
 
     return () => {
       unsubscribeTestAttempts();
       unsubscribeStudyPlans();
+      unsubscribeAISessions();
+      unsubscribeUserQueries();
+      unsubscribePythonNotebooks();
     };
   }, [user]);
 
-  // Real-time streak calculation
-  const calculateStudyStreak = () => {
-    if (testAttempts.length === 0) return 0;
-    
+  // Enhanced learning streak calculation from multiple sources
+  const calculateLearningStreak = () => {
     const today = new Date();
-    const sortedAttempts = [...testAttempts].sort((a, b) => 
-      new Date(b.finishedAt).getTime() - new Date(a.finishedAt).getTime()
-    );
+    today.setHours(0, 0, 0, 0);
     
+    // Collect all activity dates from different sources
+    const activityDates: Date[] = [];
+    
+    // From test attempts
+    testAttempts.forEach(attempt => {
+      const date = new Date(attempt.finishedAt);
+      date.setHours(0, 0, 0, 0);
+      activityDates.push(date);
+    });
+    
+    // From AI sessions
+    aiSessions.forEach(session => {
+      const date = new Date(session.createdAt);
+      date.setHours(0, 0, 0, 0);
+      activityDates.push(date);
+    });
+    
+    // From SQL queries
+    userQueries.forEach(query => {
+      const date = new Date(query.createdAt);
+      date.setHours(0, 0, 0, 0);
+      activityDates.push(date);
+    });
+    
+    // From Python notebooks
+    pythonNotebooks.forEach(notebook => {
+      const date = new Date(notebook.updatedAt);
+      date.setHours(0, 0, 0, 0);
+      activityDates.push(date);
+    });
+    
+    // Get unique dates
+    const uniqueDates = Array.from(new Set(
+      activityDates.map(d => d.getTime())
+    )).map(time => new Date(time)).sort((a, b) => b.getTime() - a.getTime());
+    
+    if (uniqueDates.length === 0) return 0;
+    
+    // Calculate streak
     let streak = 0;
     const currentDate = new Date(today);
     
-    for (const attempt of sortedAttempts) {
-      const attemptDate = new Date(attempt.finishedAt);
-      const daysDiff = Math.floor((currentDate.getTime() - attemptDate.getTime()) / (1000 * 60 * 60 * 24));
+    for (const activityDate of uniqueDates) {
+      const daysDiff = Math.floor(
+        (currentDate.getTime() - activityDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
       
       if (daysDiff === streak) {
         streak++;
@@ -89,14 +195,14 @@ const Dashboard: React.FC = () => {
     return streak;
   };
 
-  // Real-time performance metrics - Only 3 specific metrics
+  // Enhanced real-time performance metrics
   const stats = {
     studyPlansActive: studyPlans.filter(plan => plan.progressPercent < 100).length,
-    studyStreak: calculateStudyStreak(),
-    totalStudyTime: studyPlans.reduce((acc, plan) => {
-      const completedItems = plan.schedule.filter(s => s.completed).length;
-      return acc + (completedItems * 30); // 30 minutes per study item
-    }, 0)
+    learningStreak: calculateLearningStreak(),
+    totalActivity: testAttempts.length + 
+                 aiSessions.length + 
+                 userQueries.length + 
+                 pythonNotebooks.length
   };
 
   const recentActivity = testAttempts.slice(0, 2);
@@ -119,10 +225,30 @@ const Dashboard: React.FC = () => {
     <div className="p-6 max-w-7xl mx-auto bg-aris-gradient min-h-screen">
       {/* Welcome Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-high-contrast mb-2">
-          Welcome back, {user?.displayName?.split(' ')[0] || 'Student'}!
-        </h1>
-        <p className="text-secondary-contrast">Ready to continue your data analysis journey?</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-high-contrast mb-2">
+              Welcome back, {user?.displayName?.split(' ')[0] || 'Student'}!
+            </h1>
+            <p className="text-secondary-contrast">Ready to continue your data analysis journey?</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <NeumorphicButton
+              variant="accent"
+              onClick={() => navigate('/study-plans/sql-practice')}
+              icon={Database}
+            >
+              SQL Editor
+            </NeumorphicButton>
+            <NeumorphicButton
+              variant="accent"
+              onClick={() => navigate('/python-notebook')}
+              icon={Code}
+            >
+              Python Notebook
+            </NeumorphicButton>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards - Only 3 specific cards */}
@@ -139,16 +265,16 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-center w-12 h-12 bg-orange-gradient rounded-xl mx-auto mb-3 orange-glow">
             <Star className="w-6 h-6 text-gray-100" />
           </div>
-          <h3 className="text-2xl font-bold text-high-contrast">{stats.studyStreak}</h3>
-          <p className="text-secondary-contrast text-sm">Day Streak</p>
+          <h3 className="text-2xl font-bold text-high-contrast">{stats.learningStreak}</h3>
+          <p className="text-secondary-contrast text-sm">Learning Streak</p>
         </NeumorphicCard>
 
         <NeumorphicCard hoverable className="text-center">
           <div className="flex items-center justify-center w-12 h-12 bg-orange-gradient rounded-xl mx-auto mb-3 orange-glow">
             <Clock className="w-6 h-6 text-gray-100" />
           </div>
-          <h3 className="text-2xl font-bold text-high-contrast">{Math.floor(stats.totalStudyTime / 60)}h</h3>
-          <p className="text-secondary-contrast text-sm">Study Time</p>
+          <h3 className="text-2xl font-bold text-high-contrast">{stats.totalActivity}</h3>
+          <p className="text-secondary-contrast text-sm">Total Activity</p>
         </NeumorphicCard>
       </div>
 

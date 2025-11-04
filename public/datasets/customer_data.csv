@@ -1,0 +1,10 @@
+customer_id,name,email,age,city,country,purchase_amount,last_purchase
+1,John Doe,john@example.com,32,New York,USA,1250.50,2024-01-15
+2,Jane Smith,jane@example.com,28,London,UK,890.75,2024-01-20
+3,Bob Johnson,bob@example.com,45,Tokyo,Japan,2100.00,2024-01-10
+4,Alice Williams,alice@example.com,35,Paris,France,675.25,2024-01-18
+5,Charlie Brown,charlie@example.com,29,Sydney,Australia,450.00,2024-01-22
+6,Diana Miller,diana@example.com,41,Berlin,Germany,1120.80,2024-01-12
+7,Edward Davis,edward@example.com,38,Madrid,Spain,980.50,2024-01-25
+8,Fiona Wilson,fiona@example.com,31,Toronto,Canada,750.00,2024-01-14
+
