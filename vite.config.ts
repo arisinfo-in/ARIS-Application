@@ -10,18 +10,19 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      'node-fetch': false,
+      // Prevent node-fetch from being bundled
+      'node-fetch': 'data:text/javascript,export default {}',
     },
   },
   build: {
     rollupOptions: {
       external: (id) => {
         // Exclude node-fetch and its dependencies from browser bundle
-        if (id === 'node-fetch' || id.startsWith('node-fetch/') || id.startsWith('node:')) {
+        if (id === 'node-fetch' || id.startsWith('node-fetch/')) {
           return true;
         }
         // Exclude Node.js built-in modules
-        if (id.startsWith('node:') || ['fs', 'path', 'crypto', 'http', 'https', 'stream', 'util', 'buffer', 'net', 'worker_threads'].includes(id)) {
+        if (id.startsWith('node:') || ['fs', 'path', 'crypto', 'http', 'https', 'stream', 'util', 'buffer', 'net', 'worker_threads', 'zlib'].includes(id)) {
           return true;
         }
         return false;
