@@ -1,3 +1,5 @@
+import { FIREBASE_FUNCTIONS } from '../utils/firebaseFunctions';
+
 interface SpeechAnalysisResult {
   transcript: string;
   confidence: number;
@@ -67,7 +69,7 @@ class SpeechAnalysisService {
       // Convert audio to base64 for transmission
       const audioData = await this.blobToBase64(audioBlob);
       
-      const response = await fetch('/.netlify/functions/speech-analysis', {
+      const response = await fetch(FIREBASE_FUNCTIONS.speechAnalysis, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

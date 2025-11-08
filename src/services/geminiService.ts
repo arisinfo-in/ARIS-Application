@@ -1,20 +1,22 @@
 
+import { FIREBASE_FUNCTIONS } from '../utils/firebaseFunctions';
+
 class GeminiService {
   private baseUrl: string;
 
   constructor() {
-    // Use Netlify Functions for API calls
-    this.baseUrl = '/.netlify/functions';
+    // Use Firebase Functions for API calls
+    this.baseUrl = FIREBASE_FUNCTIONS.aiTutor;
   }
 
   private async makeApiCall(prompt: string, isDynamicTest: boolean = false): Promise<string> {
-    const endpoint = isDynamicTest ? '/generate-test' : '/ai-tutor';
+    const endpoint = isDynamicTest ? FIREBASE_FUNCTIONS.generateTest : FIREBASE_FUNCTIONS.aiTutor;
     const keyType = isDynamicTest ? 'Practice Test' : 'AI Tutor';
     
-    console.log(`Using ${keyType} Netlify Function`);
+    console.log(`Using ${keyType} Firebase Function`);
     
     try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -51,9 +53,9 @@ class GeminiService {
       console.log(`Generating response for module: ${module}`);
       console.log(`Conversation history: ${conversationHistory.length} messages`);
       
-      // Try Netlify Function first
+      // Try Firebase Function first
       try {
-        const response = await fetch(`${this.baseUrl}/ai-tutor`, {
+        const response = await fetch(FIREBASE_FUNCTIONS.aiTutor, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -69,10 +71,10 @@ class GeminiService {
           const data = await response.json();
           return data.response;
         } else {
-          console.log('Netlify function not available, falling back to direct API call');
+          console.log('Firebase function not available, falling back to direct API call');
         }
       } catch (functionError) {
-        console.log('Netlify function error, falling back to direct API call:', functionError);
+        console.log('Firebase function error, falling back to direct API call:', functionError);
       }
 
       // Fallback to direct API call
@@ -149,9 +151,9 @@ class GeminiService {
     try {
       console.log('Generating dynamic test...');
       
-      // Try Netlify Function first
+      // Try Firebase Function first
       try {
-        const response = await fetch(`${this.baseUrl}/generate-test`, {
+        const response = await fetch(FIREBASE_FUNCTIONS.generateTest, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -168,10 +170,10 @@ class GeminiService {
           const data = await response.json();
           return JSON.stringify(data.questions);
         } else {
-          console.log('Netlify function not available, falling back to direct API call');
+          console.log('Firebase function not available, falling back to direct API call');
         }
       } catch (functionError) {
-        console.log('Netlify function error, falling back to direct API call:', functionError);
+        console.log('Firebase function error, falling back to direct API call:', functionError);
       }
 
       // Fallback to direct API call

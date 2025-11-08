@@ -1,4 +1,5 @@
 import { geminiService } from './geminiService';
+import { FIREBASE_FUNCTIONS } from '../utils/firebaseFunctions';
 
 export interface NewsArticle {
   id: string;
@@ -173,11 +174,11 @@ class NewsService {
   }
 
   /**
-   * Fetch news articles using Netlify Function
+   * Fetch news articles using Firebase Function
    */
   private async fetchNewsFromGemini(): Promise<NewsArticle[]> {
     try {
-      const response = await fetch('/.netlify/functions/news-feed', {
+      const response = await fetch(FIREBASE_FUNCTIONS.newsFeed, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
