@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { APIKeyProvider } from './contexts/APIKeyContext';
 import Login from './pages/Login';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
@@ -10,6 +11,8 @@ import QuickLoader from './components/QuickLoader';
 import Dashboard from './pages/Dashboard';
 import Tests from './pages/Tests';
 import StudyPlans from './pages/StudyPlans';
+// Temporarily disabled - Classroom section
+// import Classroom from './pages/Classroom';
 import AITutor from './pages/AITutor';
 import SQLPractice from './pages/SQLPractice';
 import PythonNotebook from './pages/PythonNotebook';
@@ -99,9 +102,10 @@ const App: React.FC = () => {
 
   return (
     <AuthProvider>
-      <Router>
-        <ScrollToTop />
-        <Suspense fallback={<QuickLoader />}>
+      <APIKeyProvider>
+        <Router>
+          <ScrollToTop />
+          <Suspense fallback={<QuickLoader />}>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route
@@ -160,6 +164,15 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
+            {/* Temporarily disabled - Classroom section */}
+            {/* <Route
+              path="/classroom"
+              element={
+                <ProtectedRoute>
+                  <Classroom />
+                </ProtectedRoute>
+              }
+            /> */}
             <Route
               path="/python-notebook"
               element={
@@ -378,8 +391,9 @@ const App: React.FC = () => {
             />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
-        </Suspense>
-      </Router>
+          </Suspense>
+        </Router>
+      </APIKeyProvider>
     </AuthProvider>
   );
 };

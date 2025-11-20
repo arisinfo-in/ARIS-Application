@@ -1,3 +1,5 @@
+import { FIREBASE_FUNCTIONS } from '../utils/firebaseFunctions';
+
 export interface TheoryQuestion {
   question: string;
   difficulty: 'easy' | 'medium' | 'hard';
@@ -6,8 +8,6 @@ export interface TheoryQuestion {
 }
 
 class TheoryQuestionService {
-  private baseUrl = '/.netlify/functions';
-
   async generateTheoryQuestion(
     difficulty: 'easy' | 'medium' | 'hard',
     previousQuestions?: string[],
@@ -18,7 +18,7 @@ class TheoryQuestionService {
         console.log('Generating theory question using Groq API...');
       }
 
-      const response = await fetch(`${this.baseUrl}/generate-theory-question`, {
+      const response = await fetch(FIREBASE_FUNCTIONS.generateTheoryQuestion, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -32,7 +32,7 @@ class TheoryQuestionService {
 
       if (!response.ok) {
         if (process.env.NODE_ENV === 'development') {
-          console.log('Netlify function failed, using fallback');
+          console.log('Firebase function failed, using fallback');
         }
         return this.getFallbackQuestion(difficulty);
       }

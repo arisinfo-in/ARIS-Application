@@ -12,7 +12,8 @@ import {
   TrendingUp,
   MessageSquare,
   Zap,
-  Newspaper
+  Newspaper,
+  GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -47,6 +48,8 @@ const Sidebar: React.FC = () => {
     { path: '/dashboard', name: 'Dashboard', icon: Home },
     { path: '/tests', name: 'Practice Tests', icon: FileText },
     { path: '/study-plans', name: 'Study Plans', icon: Calendar },
+    // Temporarily disabled - Classroom section
+    // { path: '/classroom', name: 'Classroom', icon: GraduationCap },
     { path: '/news', name: 'The Hub', icon: Newspaper },
   ];
 

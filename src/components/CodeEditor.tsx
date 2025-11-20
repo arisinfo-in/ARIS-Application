@@ -2,6 +2,10 @@ import React, { useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 
+// Note: Monaco Editor languages are loaded on-demand by @monaco-editor/react
+// Only SQL and Python languages are used in this application
+// The editor will automatically load only the required language files
+
 interface CodeEditorProps {
   language: 'sql' | 'python';
   value: string;

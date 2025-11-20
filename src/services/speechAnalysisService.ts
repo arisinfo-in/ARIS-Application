@@ -63,7 +63,7 @@ class SpeechAnalysisService {
   async analyzeSpeech(audioBlob: Blob, question: string, difficulty: string): Promise<SpeechAnalysisResult> {
     try {
       if (process.env.NODE_ENV === 'development') {
-        console.log('Starting speech analysis using Netlify Function...');
+        console.log('Starting speech analysis using Firebase Function...');
       }
       
       // Convert audio to base64 for transmission

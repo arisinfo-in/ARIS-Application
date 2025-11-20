@@ -24,10 +24,52 @@ class PyodideService {
     }
 
     try {
-      // Load Pyodide from CDN (use version-agnostic URL or match package version)
-      this.pyodide = await loadPyodide({
-        indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/'
-      });
+      // Suppress Pyodide loader warnings for error-stack-parser and stackframe
+      // These are non-critical internal dependencies that may fail to load
+      const originalWarn = console.warn;
+      const originalError = console.error;
+      const suppressedMessages = [
+        'error-stack-parser',
+        'stackframe',
+        'Duplicate definition of module',
+        'Loading "stackframe" failed',
+        'Failed to load resource: stackframe'
+      ];
+
+      const suppressPyodideWarnings = (...args: any[]) => {
+        const message = args.join(' ');
+        const shouldSuppress = suppressedMessages.some(msg => 
+          message.includes(msg)
+        );
+        if (!shouldSuppress) {
+          originalWarn.apply(console, args);
+        }
+      };
+
+      const suppressPyodideErrors = (...args: any[]) => {
+        const message = args.join(' ');
+        const shouldSuppress = suppressedMessages.some(msg => 
+          message.includes(msg)
+        );
+        if (!shouldSuppress) {
+          originalError.apply(console, args);
+        }
+      };
+
+      // Temporarily replace console methods during Pyodide loading
+      console.warn = suppressPyodideWarnings;
+      console.error = suppressPyodideErrors;
+
+      try {
+        // Load Pyodide from CDN (use version-agnostic URL or match package version)
+        this.pyodide = await loadPyodide({
+          indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/'
+        });
+      } finally {
+        // Restore original console methods
+        console.warn = originalWarn;
+        console.error = originalError;
+      }
 
       // Install essential packages
       await this.pyodide.loadPackage(this.PACKAGES);

@@ -40,8 +40,14 @@ const Dashboard: React.FC = () => {
         ...doc.data()
       })) as TestAttempt[];
       setTestAttempts(attempts);
-    }, (error) => {
-      if (process.env.NODE_ENV === 'development') {
+    }, (error: any) => {
+      // Handle missing index error gracefully
+      if (error?.code === 'failed-precondition' && error?.message?.includes('index')) {
+        // Index is being created, silently handle this
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Firestore index is being created. This error will resolve once the index is ready.');
+        }
+      } else if (process.env.NODE_ENV === 'development') {
         console.error('Error listening to test attempts:', error);
       }
     });
@@ -79,8 +85,14 @@ const Dashboard: React.FC = () => {
         ...doc.data()
       })) as AISession[];
       setAISessions(sessions);
-    }, (error) => {
-      if (process.env.NODE_ENV === 'development') {
+    }, (error: any) => {
+      // Handle missing index error gracefully
+      if (error?.code === 'failed-precondition' && error?.message?.includes('index')) {
+        // Index is being created, silently handle this
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Firestore index is being created. This error will resolve once the index is ready.');
+        }
+      } else if (process.env.NODE_ENV === 'development') {
         console.error('Error listening to AI sessions:', error);
       }
     });
@@ -98,8 +110,14 @@ const Dashboard: React.FC = () => {
         ...doc.data()
       }));
       setUserQueries(queries);
-    }, (error) => {
-      if (process.env.NODE_ENV === 'development') {
+    }, (error: any) => {
+      // Handle missing index error gracefully
+      if (error?.code === 'failed-precondition' && error?.message?.includes('index')) {
+        // Index is being created, silently handle this
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Firestore index is being created. This error will resolve once the index is ready.');
+        }
+      } else if (process.env.NODE_ENV === 'development') {
         console.error('Error listening to user queries:', error);
       }
     });
@@ -117,8 +135,14 @@ const Dashboard: React.FC = () => {
         ...doc.data()
       }));
       setPythonNotebooks(notebooks);
-    }, (error) => {
-      if (process.env.NODE_ENV === 'development') {
+    }, (error: any) => {
+      // Handle missing index error gracefully
+      if (error?.code === 'failed-precondition' && error?.message?.includes('index')) {
+        // Index is being created, silently handle this
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Firestore index is being created. This error will resolve once the index is ready.');
+        }
+      } else if (process.env.NODE_ENV === 'development') {
         console.error('Error listening to Python notebooks:', error);
       }
     });

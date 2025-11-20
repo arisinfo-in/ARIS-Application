@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 // Plugin to handle Node.js built-in module imports
 const nodeBuiltinsPlugin = () => {
@@ -65,11 +66,26 @@ const nodeBuiltinsPlugin = () => {
 };
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react(), nodeBuiltinsPlugin()],
+export default defineConfig(({ mode }) => ({
+  plugins: [
+    react(), 
+    nodeBuiltinsPlugin(),
+    // Bundle analyzer - only runs when ANALYZE env variable is set
+    ...(process.env.ANALYZE === 'true' ? [
+      visualizer({
+        filename: 'dist/stats.html',
+        open: true,
+        gzipSize: true,
+        brotliSize: true,
+      })
+    ] : [])
+  ],
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
     exclude: ['lucide-react', 'node-fetch'],
+    // Note: lucide-react is excluded to enable tree-shaking
+    // Icons are imported as named imports (e.g., import { Icon } from 'lucide-react')
+    // which allows Vite to tree-shake unused icons automatically
   },
   resolve: {
     alias: {
@@ -84,7 +100,8 @@ export default defineConfig({
           vendor: ['react', 'react-dom', 'react-router-dom'],
           firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
           ui: ['lucide-react'],
-          utils: ['date-fns', 'uuid']
+          utils: ['date-fns', 'uuid'],
+          monaco: ['@monaco-editor/react', 'monaco-editor']
         }
       }
     },
@@ -100,7 +117,10 @@ export default defineConfig({
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
       'X-XSS-Protection': '1; mode=block',
-      'Referrer-Policy': 'strict-origin-when-cross-origin'
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      // Use unsafe-none in development to avoid COOP warnings with Firebase popups
+      // Production deployments (Netlify/Firebase) use same-origin-allow-popups (configured separately)
+      'Cross-Origin-Opener-Policy': 'unsafe-none'
     }
   }
-});
+}));

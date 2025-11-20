@@ -1,12 +1,96 @@
-import React from 'react';
-import { Bell, User, LogOut, Instagram, Facebook, Linkedin, Youtube } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bell, User, LogOut, Instagram, Facebook, Linkedin, Youtube, Key } from 'lucide-react';
 import NeumorphicButton from './NeumorphicButton';
 import NeumorphicCard from './NeumorphicCard';
+import GuideBot from './GuideBot';
+import APISettingsModal from './APISettingsModal';
 import { useAuth } from '../contexts/AuthContext';
 import { logout } from '../firebase/auth';
 
+// API Settings Button Component - Similar to ARIS Bot
+const APISettingsButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [isClicked, setIsClicked] = useState(false);
+
+  const handleClick = () => {
+    setIsClicked(true);
+    setTimeout(() => setIsClicked(false), 300);
+    onClick();
+  };
+
+  return (
+    <div
+      className="relative flex items-center cursor-pointer"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={handleClick}
+      title="API Settings - Manage Your API Keys"
+    >
+      {/* Animated Key Icon */}
+      <div className="relative">
+        {/* Pulse animation ring */}
+        {isHovered && (
+          <div className="absolute inset-0 rounded-full bg-orange-500/20 animate-ping"></div>
+        )}
+        
+        {/* Key icon with animations */}
+        <div
+          className={`relative transition-all duration-300 ${
+            isHovered ? 'scale-110' : 'scale-100'
+          } ${isClicked ? 'scale-95' : ''}`}
+        >
+          <div className="relative flex items-center gap-2">
+            {/* Glow effect on hover */}
+            {isHovered && (
+              <div className="absolute inset-0 bg-orange-400/30 blur-md rounded-full"></div>
+            )}
+            <span className={`text-sm font-semibold text-gray-100 transition-all duration-300 ${
+              isHovered ? 'text-white' : ''
+            } hidden sm:inline`}>
+              API
+            </span>
+            <Key 
+              size={20} 
+              className={`text-gray-100 transition-all duration-300 ${
+                isHovered ? 'text-white' : ''
+              }`}
+              style={{
+                animation: isHovered && !isClicked 
+                  ? 'wave 1s ease-in-out infinite' 
+                  : undefined
+              }}
+            />
+          </div>
+        </div>
+      </div>
+      
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes wave {
+          0%, 100% { transform: rotate(0deg); }
+          25% { transform: rotate(-10deg); }
+          75% { transform: rotate(10deg); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 const Navbar: React.FC = () => {
   const { user, userProfile } = useAuth();
+  const [isAPIModalOpen, setIsAPIModalOpen] = useState(false);
+
+  // Listen for custom event to open API settings from other components
+  useEffect(() => {
+    const handleOpenAPISettings = () => {
+      setIsAPIModalOpen(true);
+    };
+
+    window.addEventListener('openAPISettings', handleOpenAPISettings);
+    return () => {
+      window.removeEventListener('openAPISettings', handleOpenAPISettings);
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -41,8 +125,14 @@ const Navbar: React.FC = () => {
 
       {/* Right side - social media, notifications and user menu */}
       <div className="flex items-center gap-2 sm:gap-4">
+        {/* Guide Bot */}
+        <GuideBot />
+        
+        {/* API Settings Button - Similar to ARIS Bot */}
+        <APISettingsButton onClick={() => setIsAPIModalOpen(true)} />
+        
         {/* Social Media Icons */}
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-2 sm:gap-4">
           <NeumorphicButton 
             variant="ghost" 
             size="sm" 
@@ -119,6 +209,12 @@ const Navbar: React.FC = () => {
           </div>
         )}
       </div>
+      
+      {/* API Settings Modal */}
+      <APISettingsModal 
+        isOpen={isAPIModalOpen} 
+        onClose={() => setIsAPIModalOpen(false)} 
+      />
     </div>
   );
 };

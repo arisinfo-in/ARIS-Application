@@ -12,6 +12,7 @@ import {
   orderBy,
   limit
 } from 'firebase/firestore';
+import { UserAPIKey } from '../types/apiKey';
 
 // User types
 export interface User {
@@ -341,5 +342,61 @@ export const firestoreOperations = {
     }
     const notebookDoc = notebooksSnapshot.docs[0];
     return { id: notebookDoc.id, ...notebookDoc.data() } as PythonNotebook;
+  },
+
+  // API Keys
+  async saveUserAPIKey(apiKey: Omit<UserAPIKey, 'id'>): Promise<string> {
+    const docRef = await addDoc(collection(db, 'userApiKeys'), {
+      ...apiKey,
+      createdAt: new Date().toISOString(),
+      usageCount: 0
+    });
+    return docRef.id;
+  },
+
+  async getUserAPIKey(userId: string, provider: string): Promise<UserAPIKey | null> {
+    const keysQuery = query(
+      collection(db, 'userApiKeys'),
+      where('userId', '==', userId),
+      where('provider', '==', provider),
+      where('isActive', '==', true),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+    const keysSnapshot = await getDocs(keysQuery);
+    if (keysSnapshot.empty) {
+      return null;
+    }
+    const keyDoc = keysSnapshot.docs[0];
+    return { id: keyDoc.id, ...keyDoc.data() } as UserAPIKey;
+  },
+
+  async getAllUserAPIKeys(userId: string): Promise<UserAPIKey[]> {
+    const keysQuery = query(
+      collection(db, 'userApiKeys'),
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+    const keysSnapshot = await getDocs(keysQuery);
+    return keysSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserAPIKey));
+  },
+
+  async updateUserAPIKey(keyId: string, updates: Partial<UserAPIKey>): Promise<void> {
+    await updateDoc(doc(db, 'userApiKeys', keyId), updates);
+  },
+
+  async deleteUserAPIKey(keyId: string): Promise<void> {
+    await deleteDoc(doc(db, 'userApiKeys', keyId));
+  },
+
+  async incrementAPIKeyUsage(keyId: string): Promise<void> {
+    const keyDoc = await getDoc(doc(db, 'userApiKeys', keyId));
+    if (keyDoc.exists()) {
+      const currentData = keyDoc.data() as UserAPIKey;
+      await updateDoc(doc(db, 'userApiKeys', keyId), {
+        usageCount: (currentData.usageCount || 0) + 1,
+        lastUsed: new Date().toISOString()
+      });
+    }
   }
 };

@@ -198,7 +198,7 @@ class NewsService {
       return data.articles || [];
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
-        console.error('Error fetching news from Netlify function:', error);
+        console.error('Error fetching news from Firebase function:', error);
       }
       return this.getMockNewsData();
     }

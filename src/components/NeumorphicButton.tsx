@@ -1,4 +1,4 @@
-import React, { ButtonHTMLAttributes } from 'react';
+import React, { ButtonHTMLAttributes, forwardRef } from 'react';
 import { DivideIcon as LucideIcon } from 'lucide-react';
 
 interface NeumorphicButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -9,7 +9,7 @@ interface NeumorphicButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> 
   pressed?: boolean;
 }
 
-const NeumorphicButton: React.FC<NeumorphicButtonProps> = ({
+const NeumorphicButton = forwardRef<HTMLButtonElement, NeumorphicButtonProps>(({
   children,
   variant = 'primary',
   size = 'md',
@@ -19,7 +19,7 @@ const NeumorphicButton: React.FC<NeumorphicButtonProps> = ({
   className = '',
   disabled,
   ...props
-}) => {
+}, ref) => {
   const baseClasses = 'relative transition-all duration-200 font-medium rounded-xl border-none outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50';
   
   const variantClasses = {
@@ -48,6 +48,7 @@ const NeumorphicButton: React.FC<NeumorphicButtonProps> = ({
 
   return (
     <button
+      ref={ref}
       className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${className}`}
       disabled={disabled}
       {...props}
@@ -59,6 +60,8 @@ const NeumorphicButton: React.FC<NeumorphicButtonProps> = ({
       </div>
     </button>
   );
-};
+});
+
+NeumorphicButton.displayName = 'NeumorphicButton';
 
 export default NeumorphicButton;

@@ -1,158 +1,241 @@
-const fetch = require('node-fetch');
+import { apiKeyService } from './apiKeyService';
+import { APIProvider, APIRequestConfig, DEFAULT_MODELS } from '../types/apiKey';
+import { GeminiAdapter } from './providers/geminiAdapter';
+import { GroqAdapter } from './providers/groqAdapter';
+import { OpenAIAdapter } from './providers/openaiAdapter';
+import { FIREBASE_FUNCTIONS } from '../utils/firebaseFunctions';
 
-exports.handler = async (event, context) => {
-  // Enable CORS
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Content-Type': 'application/json'
-  };
+class UnifiedAIService {
+  private geminiAdapter = new GeminiAdapter();
+  private groqAdapter = new GroqAdapter();
+  private openaiAdapter = new OpenAIAdapter();
 
-  // Handle preflight requests
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers,
-      body: ''
-    };
-  }
-
-  // Only allow POST requests
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    };
-  }
-
-  try {
-    const { prompt, module, conversationHistory = [] } = JSON.parse(event.body);
-
-    if (!prompt || !module) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'Missing required fields: prompt and module' })
-      };
+  /**
+   * Generate AI response using user's API key or fallback to default
+   * 
+   * @param allowFallback - If true, falls back to default API when user key not found.
+   *                        If false, throws error requiring user to add their API key.
+   *                        Default: false (require user API key)
+   */
+  async generateResponse(
+    userId: string | null,
+    prompt: string,
+    module: string,
+    conversationHistory: Array<{ content: string; isUser: boolean }> = [],
+    isDynamicTest: boolean = false,
+    allowFallback: boolean = false
+  ): Promise<string> {
+    // Try to get user's API key
+    let userKey = null;
+    let usedProvider: APIProvider | null = null;
+    if (userId) {
+      // Try providers in order: groq, gemini, openai
+      userKey = await apiKeyService.getUserAPIKey(userId, 'groq');
+      if (userKey) {
+        usedProvider = 'groq';
+      } else {
+        userKey = await apiKeyService.getUserAPIKey(userId, 'gemini');
+        if (userKey) {
+          usedProvider = 'gemini';
+        } else {
+          userKey = await apiKeyService.getUserAPIKey(userId, 'openai');
+          if (userKey) {
+            usedProvider = 'openai';
+          }
+        }
+      }
     }
 
-    // Get API key from environment variables or use fallback
-    const apiKey = process.env.GROQ_API_KEY || '';
+    // If user has API key, use it
+    if (userKey && userKey.isActive) {
+      try {
+        const config: APIRequestConfig = {
+          prompt,
+          module,
+          conversationHistory,
+          systemPrompt: this.getSystemPrompt(module),
+          temperature: isDynamicTest ? 0.7 : 1,
+          maxTokens: isDynamicTest ? 8192 : 4096
+        };
+
+        if (process.env.NODE_ENV === 'development' && usedProvider) {
+          console.log(`Using user's ${usedProvider} API key for ${module} module`);
+        }
+
+        const response = await this.callWithUserKey(userKey, config);
+        
+        // Increment usage with proper error handling
+        if (userKey.id) {
+          try {
+            await apiKeyService.incrementUsage(userKey.id);
+          } catch (usageError: any) {
+            // Log but don't fail the request if usage tracking fails
+            console.warn('Failed to increment API key usage:', usageError);
+          }
+        }
+        
+        return response;
+      } catch (error: any) {
+        // If user key fails, fall back to default
+        console.warn(`User ${usedProvider} API key failed, falling back to default:`, error?.message || error);
+        // Continue to fallback below
+      }
+    }
+
+    // If fallback is not allowed, require user API key
+    if (!allowFallback) {
+      throw new Error('API_KEY_REQUIRED: Please add your API key in Settings to use this feature. The ARIS bot continues to work without an API key.');
+    }
+
+    // Fallback to default (Firebase Functions or direct API) - only for ARIS Bot
+    return this.generateResponseWithDefault(prompt, module, conversationHistory, isDynamicTest);
+  }
+
+  private async callWithUserKey(userKey: any, config: APIRequestConfig): Promise<string> {
+    const { provider, apiKey, model } = userKey;
+    const adapter = this.getAdapter(provider);
+    
+    return await adapter.generateResponse(apiKey, model || DEFAULT_MODELS[provider], config);
+  }
+
+  private getAdapter(provider: APIProvider) {
+    switch (provider) {
+      case 'gemini':
+        return this.geminiAdapter;
+      case 'groq':
+        return this.groqAdapter;
+      case 'openai':
+        return this.openaiAdapter;
+      default:
+        throw new Error(`Unknown provider: ${provider}`);
+    }
+  }
+
+  private async generateResponseWithDefault(
+    prompt: string,
+    module: string,
+    conversationHistory: Array<{ content: string; isUser: boolean }> = [],
+    isDynamicTest: boolean = false
+  ): Promise<string> {
+    const endpoint = isDynamicTest ? FIREBASE_FUNCTIONS.generateTest : FIREBASE_FUNCTIONS.aiTutor;
+    
+    try {
+      // Try Firebase Function first
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt,
+          module,
+          conversationHistory
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.response;
+      }
+
+      // Check for rate limit
+      if (response.status === 429) {
+        const errorText = await response.text();
+        let retryAfter = '30 seconds';
+        try {
+          const errorData = JSON.parse(errorText);
+          retryAfter = errorData.retryAfter || errorData.error?.details?.[0]?.retryDelay || '30 seconds';
+        } catch {
+          // Use default
+        }
+        throw new Error(`API_RATE_LIMIT: Rate limit exceeded. Please try again in ${retryAfter}.`);
+      }
+    } catch (functionError: any) {
+      if (functionError?.message?.includes('API_RATE_LIMIT')) {
+        throw functionError;
+      }
+      console.log('Firebase function not available, falling back to direct API call');
+    }
+
+    // Fallback to direct API call with default key
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY || '';
     if (!apiKey) {
-      console.error('GROQ_API_KEY not found in environment variables');
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ error: 'Server configuration error' })
-      };
+      throw new Error('No API key available. Please configure your API key in settings.');
     }
 
-    // Build conversation context
-    const conversationContext = buildConversationContext(conversationHistory);
-    const systemPrompt = getSystemPrompt(module);
+    const conversationContext = this.buildConversationContext(conversationHistory);
+    const systemPrompt = this.getSystemPrompt(module);
     const fullPrompt = `${systemPrompt}\n\n${conversationContext}User: ${prompt}`;
 
-    // Call Groq API
+    // Build request body with correct parameters
+    const requestBody: any = {
+      model: 'openai/gpt-oss-120b',
+      messages: [{
+        role: 'user',
+        content: fullPrompt
+      }],
+      temperature: isDynamicTest ? 0.7 : 1,
+      max_tokens: isDynamicTest ? 8192 : 4096,
+      top_p: 1,
+      stream: false
+    };
+
+    // Include reasoning_effort for this model
+    requestBody.reasoning_effort = 'medium';
+
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        model: "openai/gpt-oss-120b",
-        messages: [{
-          role: "user",
-          content: fullPrompt
-        }],
-        temperature: 1,
-        max_completion_tokens: 4096,
-        top_p: 1,
-        reasoning_effort: "medium",
-        stream: false,
-        stop: null
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      const errorData = JSON.parse(errorText);
-      
-      if (errorData.error?.code === 429) {
-        const retryAfter = errorData.error?.details?.[0]?.retryDelay || '30 seconds';
-        return {
-          statusCode: 429,
-          headers,
-          body: JSON.stringify({ 
-            error: `API quota exceeded. Please try again in ${retryAfter} or upgrade your API plan.` 
-          })
-        };
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = {};
       }
       
-      console.error('Groq API Error:', errorText);
-      return {
-        statusCode: response.status,
-        headers,
-        body: JSON.stringify({ 
-          error: `API error: ${response.status} ${response.statusText}` 
-        })
-      };
+      if (response.status === 429 || errorData.error?.code === 429) {
+        const retryAfter = errorData.error?.details?.[0]?.retryDelay || errorData.retryAfter || '30 seconds';
+        throw new Error(`API_RATE_LIMIT: Rate limit exceeded. Please try again in ${retryAfter} or upgrade your API plan.`);
+      }
+      
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
     
     if (!data.choices || data.choices.length === 0) {
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ error: 'No response generated from AI' })
-      };
+      throw new Error('No response generated from AI');
     }
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ 
-        response: data.choices[0].message.content,
-        module,
-        timestamp: new Date().toISOString()
-      })
-    };
-
-  } catch (error) {
-    console.error('Error in ai-tutor function:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ 
-        error: 'Internal server error',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      })
-    };
-  }
-};
-
-function buildConversationContext(conversationHistory) {
-  if (!conversationHistory || conversationHistory.length === 0) {
-    return '';
+    return data.choices[0].message.content;
   }
 
-  // Only include the last 10 messages to avoid token limits
-  const recentMessages = conversationHistory.slice(-10);
-  
-  const context = recentMessages.map(msg => {
-    const role = msg.isUser ? 'User' : 'Assistant';
-    return `${role}: ${msg.content}`;
-  }).join('\n');
+  private buildConversationContext(conversationHistory: Array<{ content: string; isUser: boolean }>): string {
+    if (!conversationHistory || conversationHistory.length === 0) {
+      return '';
+    }
 
-  return `Conversation History:\n${context}\n\n`;
-}
+    const recentMessages = conversationHistory.slice(-10);
+    
+    const context = recentMessages.map(msg => {
+      const role = msg.isUser ? 'User' : 'Assistant';
+      return `${role}: ${msg.content}`;
+    }).join('\n');
 
-function getSystemPrompt(module) {
-  const modulePrompts = {
-    excel: `You are EXCLUSIVELY a Microsoft Excel expert tutor. You ONLY provide Excel-specific knowledge and solutions.
+    return `Conversation History:\n${context}\n\n`;
+  }
+
+  private getSystemPrompt(module: string): string {
+    const modulePrompts: Record<string, string> = {
+      excel: `You are EXCLUSIVELY a Microsoft Excel expert tutor. You ONLY provide Excel-specific knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about Microsoft Excel
@@ -180,7 +263,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate Excel solutions`,
 
-    powerbi: `You are EXCLUSIVELY a Microsoft Power BI expert tutor. You ONLY provide Power BI-specific knowledge and solutions.
+      powerbi: `You are EXCLUSIVELY a Microsoft Power BI expert tutor. You ONLY provide Power BI-specific knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about Microsoft Power BI
@@ -209,7 +292,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate Power BI solutions`,
 
-    sql: `You are EXCLUSIVELY a SQL and Database expert tutor. You ONLY provide SQL-specific knowledge and solutions.
+      sql: `You are EXCLUSIVELY a SQL and Database expert tutor. You ONLY provide SQL-specific knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about SQL and databases
@@ -238,7 +321,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate SQL solutions`,
 
-    python: `You are EXCLUSIVELY a Python expert tutor. You ONLY provide Python-specific knowledge and solutions.
+      python: `You are EXCLUSIVELY a Python expert tutor. You ONLY provide Python-specific knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about Python programming
@@ -267,7 +350,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate Python solutions`,
 
-    statistics: `You are EXCLUSIVELY a Statistics expert tutor. You ONLY provide statistical knowledge and solutions.
+      statistics: `You are EXCLUSIVELY a Statistics expert tutor. You ONLY provide statistical knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about statistics and statistical methods
@@ -296,7 +379,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate statistical solutions`,
 
-    ml: `You are EXCLUSIVELY a Machine Learning expert tutor. You ONLY provide ML-specific knowledge and solutions.
+      ml: `You are EXCLUSIVELY a Machine Learning expert tutor. You ONLY provide ML-specific knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about machine learning and AI
@@ -325,7 +408,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate ML solutions`,
 
-    prompt: `You are EXCLUSIVELY a Prompt Engineering expert tutor. You ONLY provide prompt engineering knowledge and solutions.
+      prompt: `You are EXCLUSIVELY a Prompt Engineering expert tutor. You ONLY provide prompt engineering knowledge and solutions.
 
 STRICT RULES:
 - ONLY answer questions about prompt engineering and AI interaction
@@ -354,7 +437,7 @@ RESPONSE STYLE:
 - **Highlighted key concepts** and important terms
 - Focus on immediate prompt engineering solutions`,
 
-    advanced: `You are EXCLUSIVELY an Advanced AI expert tutor. You ONLY provide advanced AI and cutting-edge technology knowledge.
+      advanced: `You are EXCLUSIVELY an Advanced AI expert tutor. You ONLY provide advanced AI and cutting-edge technology knowledge.
 
 STRICT RULES:
 - ONLY answer questions about advanced AI, deep learning, and cutting-edge technologies
@@ -382,8 +465,12 @@ RESPONSE STYLE:
 - Real advanced code with proper syntax
 - **Highlighted key concepts** and important terms
 - Focus on immediate advanced AI solutions`
-  };
+    };
 
-  return modulePrompts[module] || 
-         `You are an expert data analysis tutor. Help users learn data analysis concepts, tools, and techniques. Provide clear explanations with practical examples.`;
+    return modulePrompts[module] || 
+           `You are an expert data analysis tutor. Help users learn data analysis concepts, tools, and techniques. Provide clear explanations with practical examples.`;
+  }
 }
+
+export const unifiedAIService = new UnifiedAIService();
+

@@ -94,6 +94,35 @@ body {
   overflow: hidden;
 }
 
+/* Modal animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 /* Enhanced card visibility */
 .card-enhanced {
   background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
@@ -139,4 +168,354 @@ body {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Safari and Chrome */
+}
+
+/* ============================================
+   INTERACTIVE LOGIN PAGE ANIMATIONS
+   ============================================ */
+
+/* Animated gradient background */
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.bg-animated-gradient {
+  background: linear-gradient(-45deg, #000000, #0a0a0a, #1a1a1a, #0f0f0f, #000000);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+/* Floating particles animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0.7;
+  }
+  33% {
+    transform: translateY(-30px) translateX(20px);
+    opacity: 1;
+  }
+  66% {
+    transform: translateY(30px) translateX(-20px);
+    opacity: 0.5;
+  }
+}
+
+@keyframes floatReverse {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0.5;
+  }
+  33% {
+    transform: translateY(30px) translateX(-20px);
+    opacity: 0.8;
+  }
+  66% {
+    transform: translateY(-30px) translateX(20px);
+    opacity: 0.6;
+  }
+}
+
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0));
+  animation: float 20s infinite ease-in-out;
+}
+
+.particle-reverse {
+  animation: floatReverse 25s infinite ease-in-out;
+}
+
+/* Floating label animation */
+@keyframes labelFloat {
+  from {
+    transform: translateY(0) scale(1);
+    opacity: 0.7;
+  }
+  to {
+    transform: translateY(-24px) scale(0.85);
+    opacity: 1;
+  }
+}
+
+@keyframes labelFloatBack {
+  from {
+    transform: translateY(-24px) scale(0.85);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 0.7;
+  }
+}
+
+.floating-label {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #9ca3af;
+  z-index: 15;
+}
+
+/* When label has icon (left-10), position it further right even when inactive */
+.floating-label.left-10 {
+  left: 2.75rem !important; /* 44px - gives space after icon */
+}
+
+.floating-label.active {
+  top: 0;
+  transform: translateY(-50%) scale(0.85);
+  color: #f97316;
+  background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+  padding: 0 8px;
+  border-radius: 4px;
+}
+
+/* When label is active and positioned with left-10 (has icon), position it after the icon with more spacing */
+.floating-label.left-10.active {
+  left: 3rem !important; /* 48px - gives more space after icon (icon is at 12px, ~20px wide, so starts at ~32px) */
+}
+
+/* When label is active and positioned with left-4 (no icon), keep it at 1rem */
+.floating-label.left-4.active {
+  left: 1rem !important;
+}
+
+.input-focused .floating-label {
+  color: #f97316;
+}
+
+/* Input focus glow */
+@keyframes inputGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+  }
+}
+
+.input-glow {
+  transition: all 0.3s ease;
+}
+
+.input-glow:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1), 0 0 20px rgba(249, 115, 22, 0.2);
+  animation: inputGlow 2s ease-in-out infinite;
+}
+
+/* Ripple effect */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  transform: scale(0);
+  animation: ripple 0.6s ease-out;
+  pointer-events: none;
+}
+
+/* Button loading animation */
+@keyframes buttonPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 10px rgba(249, 115, 22, 0);
+  }
+}
+
+.button-loading {
+  animation: buttonPulse 2s ease-in-out infinite;
+}
+
+/* Slide transitions */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-in-right {
+  animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card hover animations */
+@keyframes cardFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.02);
+  }
+}
+
+.card-hover-animate:hover {
+  animation: cardFloat 3s ease-in-out infinite;
+  transition: all 0.3s ease;
+}
+
+/* Icon animations */
+@keyframes iconBounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-5px) scale(1.1);
+  }
+}
+
+.icon-bounce {
+  animation: iconBounce 2s ease-in-out infinite;
+}
+
+.icon-bounce-delay-1 {
+  animation: iconBounce 2s ease-in-out infinite;
+  animation-delay: 0.3s;
+}
+
+.icon-bounce-delay-2 {
+  animation: iconBounce 2s ease-in-out infinite;
+  animation-delay: 0.6s;
+}
+
+/* Success checkmark animation */
+@keyframes checkmark {
+  0% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+.checkmark-animate {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: checkmark 0.6s ease-out forwards;
+}
+
+/* Error shake animation */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Pulse glow for branding */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(249, 115, 22, 0.6);
+  }
+}
+
+.pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+/* Smooth tab transition */
+@keyframes tabSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tab-content {
+  animation: tabSlide 0.3s ease-out;
+}
+
+/* OTP input animation */
+@keyframes otpPulse {
+  0%, 100% {
+    transform: scale(1);
+    border-color: rgba(249, 115, 22, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    border-color: rgba(249, 115, 22, 0.6);
+  }
+}
+
+.otp-input:focus {
+  animation: otpPulse 1.5s ease-in-out infinite;
 }

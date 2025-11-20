@@ -1,3 +1,4 @@
+import { FIREBASE_FUNCTIONS } from '../utils/firebaseFunctions';
 import { PracticalQuestion, TestCase } from './practicalQuestionService';
 
 export interface CodeValidationResult {
@@ -18,8 +19,6 @@ export interface TestCaseResult {
 }
 
 class CodeValidationService {
-  private baseUrl = '/.netlify/functions';
-
   async validateCode(
     code: string,
     question: PracticalQuestion,
@@ -45,7 +44,7 @@ class CodeValidationService {
       }
 
       // Call validation API
-      const response = await fetch(`${this.baseUrl}/validate-code`, {
+      const response = await fetch(FIREBASE_FUNCTIONS.validateCode, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

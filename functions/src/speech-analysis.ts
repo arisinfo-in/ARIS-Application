@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import fetch from 'node-fetch';
 
 export async function speechAnalysis(req: Request, res: Response) {
   // Only allow POST requests

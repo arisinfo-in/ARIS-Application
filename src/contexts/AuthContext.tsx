@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { User } from 'firebase/auth';
 import { onAuthStateChange } from '../firebase/auth';
 import { firestoreOperations, User as UserProfile } from '../firebase/firestore';
+import { setCurrentUserId } from '../services/geminiService';
 
 interface AuthContextType {
   user: User | null;
@@ -33,6 +34,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const unsubscribe = onAuthStateChange(async (user) => {
       setUser(user);
       setLoading(false); // Set loading to false immediately after user state is set
+      
+      // Update current user ID for geminiService
+      setCurrentUserId(user?.uid || null);
       
       // Load user profile asynchronously without blocking
       if (user) {

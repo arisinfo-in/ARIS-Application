@@ -261,7 +261,11 @@
                 </div>
                 <div class="tech-item">
                     <h4>AI Integration</h4>
-                    <p>Groq API (GPT-OSS-120B model)</p>
+                    <p>GROQ API (GPT-OSS-120B model) via Firebase Functions</p>
+                </div>
+                <div class="tech-item">
+                    <h4>Code Execution</h4>
+                    <p>SQL.js (in-browser SQL), Pyodide (in-browser Python)</p>
                 </div>
                 <div class="tech-item">
                     <h4>File Storage</h4>
@@ -290,7 +294,7 @@
                 <div class="feature-card">
                     <h4>📝 Dynamic Practice Testing</h4>
                     <ul>
-                        <li>AI-Generated Tests using Groq API</li>
+                        <li>AI-Generated Tests using GROQ API (GPT-OSS-120B)</li>
                         <li>Performance Analysis with weak area identification</li>
                         <li>Recommended Tests based on user performance</li>
                         <li>Multiple Difficulty Levels (Beginner, Intermediate, Advanced)</li>
@@ -307,6 +311,55 @@
                         <li>Module Selection for focused learning</li>
                         <li>Flexible Duration (3-60 day plans)</li>
                         <li>Visual Progress indicators</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h4>💻 SQL Practice Environment</h4>
+                    <ul>
+                        <li>In-browser SQL.js engine for query execution</li>
+                        <li>Multiple datasets (Customer, Sales, Weather data)</li>
+                        <li>Interactive schema explorer</li>
+                        <li>Query history and saved queries</li>
+                        <li>Real-time query execution with results visualization</li>
+                        <li>Export queries to PDF</li>
+                        <li>User-specific query storage in Firestore</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h4>🐍 Python Notebook</h4>
+                    <ul>
+                        <li>In-browser Python execution with Pyodide</li>
+                        <li>Multi-cell notebook interface</li>
+                        <li>Pre-loaded datasets for data analysis</li>
+                        <li>Problem templates and examples</li>
+                        <li>Save and load notebooks</li>
+                        <li>Code validation and error handling</li>
+                        <li>User-specific notebook storage</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h4>🎤 Mock Interview System</h4>
+                    <ul>
+                        <li>AI-powered interview simulation</li>
+                        <li>Speech analysis with real-time feedback</li>
+                        <li>Video recording and playback</li>
+                        <li>Detailed performance analysis</li>
+                        <li>Personalized improvement suggestions</li>
+                        <li>Multiple difficulty levels</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <h4>📝 Practical & Theory Questions</h4>
+                    <ul>
+                        <li>AI-generated practical coding questions</li>
+                        <li>Theory questions for concept testing</li>
+                        <li>Code validation with test cases</li>
+                        <li>Real-time feedback and scoring</li>
+                        <li>Module-specific question sets</li>
                     </ul>
                 </div>
 
@@ -373,13 +426,24 @@
         <div class="section">
             <h2>🔧 Key Services & Integrations</h2>
             
-            <h3>Gemini Service (AI Integration)</h3>
+            <h3>AI Service (GROQ Integration)</h3>
             <ul>
-                <li><strong>Dual API Keys:</strong> Separate keys for tutoring and test generation</li>
+                <li><strong>GROQ API:</strong> Uses GPT-OSS-120B model via Firebase Functions</li>
+                <li><strong>Firebase Functions:</strong> Serverless functions for AI operations</li>
                 <li><strong>Module-Specific Prompts:</strong> Tailored system prompts for each learning module</li>
                 <li><strong>Conversation Context:</strong> Maintains chat history for better responses</li>
-                <li><strong>Error Handling:</strong> Graceful API failure management</li>
+                <li><strong>Error Handling:</strong> Graceful API failure management with fallback</li>
                 <li><strong>Rate Limiting:</strong> Quota management and retry logic</li>
+                <li><strong>Multiple Endpoints:</strong> AI Tutor, Test Generation, Code Validation, Speech Analysis</li>
+            </ul>
+
+            <h3>Code Execution Services</h3>
+            <ul>
+                <li><strong>SQL.js Engine:</strong> In-browser SQL database execution</li>
+                <li><strong>Pyodide Service:</strong> In-browser Python runtime with NumPy, Pandas support</li>
+                <li><strong>Code Validation:</strong> AI-powered code checking and feedback</li>
+                <li><strong>Memory Management:</strong> Automatic cleanup and resource management</li>
+                <li><strong>Timeout Protection:</strong> Prevents infinite loops and long-running code</li>
             </ul>
 
             <h3>Firebase Integration</h3>
@@ -392,10 +456,12 @@
 
             <h3>Dynamic Test Service</h3>
             <ul>
-                <li><strong>AI Question Generation:</strong> Creates custom test questions</li>
+                <li><strong>AI Question Generation:</strong> Creates custom test questions using GROQ API</li>
                 <li><strong>Topic-Based Testing:</strong> Focus on specific skill areas</li>
                 <li><strong>Difficulty Scaling:</strong> Adaptive question complexity</li>
                 <li><strong>Performance Analysis:</strong> Identifies learning gaps</li>
+                <li><strong>Practical Questions:</strong> Coding challenges with test cases</li>
+                <li><strong>Theory Questions:</strong> Conceptual understanding assessment</li>
             </ul>
         </div>
 
@@ -480,9 +546,11 @@ interface StudyPlan {
             <h3>Runtime Performance</h3>
             <ul>
                 <li><strong>Memoization:</strong> React.memo for expensive components</li>
-                <li><strong>State Optimization:</strong> Minimal re-renders</li>
+                <li><strong>State Optimization:</strong> Minimal re-renders with useCallback and useMemo</li>
                 <li><strong>Real-time Updates:</strong> Efficient Firestore listeners</li>
                 <li><strong>Error Boundaries:</strong> Graceful error handling</li>
+                <li><strong>Code Splitting:</strong> Lazy loading for routes and heavy components</li>
+                <li><strong>In-browser Execution:</strong> Client-side SQL and Python execution reduces server load</li>
             </ul>
         </div>
 
@@ -500,9 +568,11 @@ interface StudyPlan {
             <h3>Data Security</h3>
             <ul>
                 <li><strong>Input Validation:</strong> Client and server-side validation</li>
-                <li><strong>XSS Protection:</strong> Content sanitization</li>
+                <li><strong>XSS Protection:</strong> Content sanitization (needs improvement for dangerouslySetInnerHTML)</li>
                 <li><strong>CSRF Protection:</strong> Request validation</li>
-                <li><strong>Environment Variables:</strong> Secure API key management</li>
+                <li><strong>Environment Variables:</strong> Secure API key management via Firebase Secrets</li>
+                <li><strong>User Data Isolation:</strong> Firestore rules ensure users only access their own data</li>
+                <li><strong>Code Execution Safety:</strong> Timeout protection and memory limits for in-browser execution</li>
             </ul>
 
             <h3>Privacy</h3>
@@ -581,28 +651,28 @@ src/
             
             <div class="stats-grid">
                 <div class="stat-item">
-                    <span class="stat-number">50+</span>
+                    <span class="stat-number">80+</span>
                     <span class="stat-label">TypeScript/React files</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-number">15,000+</span>
+                    <span class="stat-number">30,000+</span>
                     <span class="stat-label">Lines of code</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-number">25+</span>
+                    <span class="stat-number">35+</span>
                     <span class="stat-label">Distinct pages</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-number">20+</span>
+                    <span class="stat-number">25+</span>
                     <span class="stat-label">Reusable components</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-number">5+</span>
-                    <span class="stat-label">External service integrations</span>
+                    <span class="stat-number">15+</span>
+                    <span class="stat-label">Service integrations</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-number">20+</span>
-                    <span class="stat-label">Production dependencies</span>
+                    <span class="stat-number">8+</span>
+                    <span class="stat-label">Firebase Functions</span>
                 </div>
             </div>
         </div>
@@ -653,10 +723,12 @@ src/
 
             <h3>Technical Improvements</h3>
             <ul>
-                <li><strong>Microservices:</strong> Backend service separation</li>
-                <li><strong>Real-time Collaboration:</strong> Multi-user features</li>
-                <li><strong>Advanced AI:</strong> More sophisticated AI tutoring</li>
+                <li><strong>Code Quality:</strong> Remove console statements, improve type safety (reduce 'any' usage)</li>
+                <li><strong>Security:</strong> Sanitize HTML content, improve XSS protection</li>
+                <li><strong>Testing:</strong> Add unit tests and integration tests</li>
                 <li><strong>Performance:</strong> Further optimization and caching</li>
+                <li><strong>Error Handling:</strong> Implement custom error classes for better debugging</li>
+                <li><strong>Documentation:</strong> Improve code documentation and API docs</li>
             </ul>
         </div>
 

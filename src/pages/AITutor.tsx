@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Send, Bot, User, Loader, FileSpreadsheet, BarChart3, Database, Code, TrendingUp, Brain, MessageSquare, Zap, Plus, Lightbulb, ChevronRight } from 'lucide-react';
 import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
+import APIKeyRequiredModal from '../components/APIKeyRequiredModal';
 import { useAuth } from '../contexts/AuthContext';
 import { firestoreOperations, AIMessage } from '../firebase/firestore';
 import { geminiService } from '../services/geminiService';
@@ -29,6 +30,8 @@ const AITutor: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
+  const [showAPIKeyModal, setShowAPIKeyModal] = useState(false);
+  const [showAPISettingsModal, setShowAPISettingsModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const module = moduleInfo[moduleId as keyof typeof moduleInfo];
@@ -256,7 +259,15 @@ const AITutor: React.FC = () => {
       }
 
       setLoading(false);
-    } catch (error) {
+    } catch (error: any) {
+      setLoading(false);
+      
+      // Check if it's an API key required error
+      if (error?.message?.includes('API_KEY_REQUIRED')) {
+        setShowAPIKeyModal(true);
+        return;
+      }
+      
       if (process.env.NODE_ENV === 'development') {
         console.error('Error sending message:', error);
       }
@@ -271,8 +282,6 @@ const AITutor: React.FC = () => {
 
       const finalMessages = [...updatedMessagesWithUser, errorMessage];
       setMessages(finalMessages);
-
-      setLoading(false);
     }
   };
 
@@ -538,6 +547,18 @@ const AITutor: React.FC = () => {
           </div>
         )}
       </NeumorphicCard>
+
+      {/* API Key Required Modal */}
+      <APIKeyRequiredModal
+        isOpen={showAPIKeyModal}
+        onClose={() => setShowAPIKeyModal(false)}
+        onOpenAPISettings={() => {
+          // Trigger API settings modal in Navbar
+          window.dispatchEvent(new CustomEvent('openAPISettings'));
+          setShowAPIKeyModal(false);
+        }}
+        featureName={`${module?.name || 'AI Tutor'}`}
+      />
     </div>
   );
 };

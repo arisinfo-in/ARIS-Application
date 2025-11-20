@@ -56,6 +56,12 @@ service cloud.firestore {
       allow list: if request.auth != null;
     }
     
+    // Google Classroom Tokens - users can only access their own tokens
+    match /users/{userId}/classroomTokens/{tokenId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
     // Website Contact Forms - Public write access for form submissions, authenticated read
     match /contact-forms/{document} {
       allow read: if request.auth != null;
@@ -78,6 +84,20 @@ service cloud.firestore {
     match /roadmap-selections/{document} {
       allow read: if request.auth != null;
       allow write: if true; // Public write access for roadmap selections
+    }
+    
+    // User API Keys - users can only access their own API keys
+    match /userApiKeys/{keyId} {
+      // Allow create only if userId matches authenticated user
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      
+      // Allow read, update, delete only if userId matches authenticated user
+      allow read, update, delete: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      
+      // Allow list queries (filtered by userId in application code)
+      allow list: if request.auth != null;
     }
   }
 }

@@ -3,6 +3,7 @@ import { Plus, Play, Trophy, Clock, BookOpen, Filter, Target, Trash2 } from 'luc
 import { Link } from 'react-router-dom';
 import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
+import APIKeyRequiredModal from '../components/APIKeyRequiredModal';
 import { useAuth } from '../contexts/AuthContext';
 import { firestoreOperations, Test } from '../firebase/firestore';
 import { dynamicTestService } from '../services/dynamicTestService';
@@ -18,6 +19,7 @@ const Tests: React.FC = () => {
   const [newTestModule, setNewTestModule] = useState('excel');
   const [newTestLevel, setNewTestLevel] = useState('beginner');
   const [newTestTopics, setNewTestTopics] = useState('');
+  const [showAPIKeyModal, setShowAPIKeyModal] = useState(false);
 
   const modules = [
     { id: 'all', name: 'All Modules' },
@@ -987,11 +989,18 @@ const Tests: React.FC = () => {
       setNewTestLevel('beginner');
       setShowCreateForm(false);
       loadTests();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating custom test:', error);
       
+      // Check if it's an API key required error
+      if (error?.message?.includes('API_KEY_REQUIRED')) {
+        setShowAPIKeyModal(true);
+        setIsGeneratingRecommendation(false);
+        return;
+      }
+      
       // Check if it's a quota error
-      if (error.message && error.message.includes('quota')) {
+      if (error?.message && error.message.includes('quota')) {
         alert('API quota exceeded. Please try again in a few minutes or upgrade your API plan. The AI tutors are also affected by this limitation.');
       } else {
         alert('Failed to create test. Please try again.');
@@ -1302,6 +1311,17 @@ const Tests: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* API Key Required Modal */}
+      <APIKeyRequiredModal
+        isOpen={showAPIKeyModal}
+        onClose={() => setShowAPIKeyModal(false)}
+        onOpenAPISettings={() => {
+          window.dispatchEvent(new CustomEvent('openAPISettings'));
+          setShowAPIKeyModal(false);
+        }}
+        featureName="Practice Tests"
+      />
     </div>
   );
 };

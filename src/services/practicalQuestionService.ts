@@ -1,3 +1,5 @@
+import { FIREBASE_FUNCTIONS } from '../utils/firebaseFunctions';
+
 export interface TestCase {
   description: string;
   expectedOutput: string;
@@ -17,8 +19,6 @@ export interface PracticalQuestion {
 }
 
 class PracticalQuestionService {
-  private baseUrl = '/.netlify/functions';
-
   async generatePracticalQuestion(
     theoryQuestion: string,
     userTranscript: string,
@@ -39,7 +39,7 @@ class PracticalQuestionService {
         technicalTerms
       );
 
-      const response = await fetch(`${this.baseUrl}/generate-practical-question`, {
+      const response = await fetch(FIREBASE_FUNCTIONS.generatePracticalQuestion, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -56,7 +56,7 @@ class PracticalQuestionService {
 
       if (!response.ok) {
         if (process.env.NODE_ENV === 'development') {
-          console.log('Netlify function failed, using fallback');
+          console.log('Firebase function failed, using fallback');
         }
         return this.getFallbackQuestion(module, difficulty);
       }
