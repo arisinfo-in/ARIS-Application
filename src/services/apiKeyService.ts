@@ -29,33 +29,68 @@ class APIKeyService {
   }
 
   private async validateGeminiKey(apiKey: string, model: string): Promise<APIKeyValidationResult> {
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: 'test'
-            }]
-          }]
-        })
-      });
+    // Try v1 endpoint first for newer models, fallback to v1beta for older models
+    const endpoints = [
+      `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+    ];
 
-      if (!response.ok) {
+    let lastError: string | null = null;
+
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(`${endpoint}?key=${apiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: 'test'
+              }]
+            }]
+          })
+        });
+
+        if (response.ok) {
+          return { isValid: true, model };
+        }
+
+        // Parse error response
         const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error?.message || `API error: ${response.status} ${response.statusText}`;
+        
+        // If 404 (model not found), try next endpoint
+        if (response.status === 404 && endpoint !== endpoints[endpoints.length - 1]) {
+          lastError = `Model "${model}" not found. Trying alternative endpoint...`;
+          continue;
+        }
+
+        // For other errors, return detailed error message
         return {
           isValid: false,
-          error: errorData.error?.message || 'Invalid API key'
+          error: errorMessage
+        };
+      } catch (error: any) {
+        // Network or parsing errors - try next endpoint if available
+        if (endpoint !== endpoints[endpoints.length - 1]) {
+          lastError = error.message || 'Validation failed';
+          continue;
+        }
+        // Last endpoint failed
+        return { 
+          isValid: false, 
+          error: error.message || lastError || 'Validation failed. Please check your API key and model name.' 
         };
       }
-
-      return { isValid: true, model };
-    } catch (error: any) {
-      return { isValid: false, error: error.message || 'Validation failed' };
     }
+
+    // If all endpoints failed
+    return { 
+      isValid: false, 
+      error: lastError || `Model "${model}" not found or not accessible. Please verify the model name is correct.` 
+    };
   }
 
   private async validateGroqKey(apiKey: string, model: string): Promise<APIKeyValidationResult> {
@@ -95,6 +130,23 @@ class APIKeyService {
           errorData = {};
         }
         
+        // Handle rate limiting
+        if (response.status === 429 || errorData.error?.code === 429) {
+          const retryAfter = errorData.error?.details?.[0]?.retryDelay || errorData.retryAfter || '30 seconds';
+          return {
+            isValid: false,
+            error: `Rate limit exceeded. Please try again in ${retryAfter} or upgrade your API plan.`
+          };
+        }
+        
+        // Handle model not found errors
+        if (response.status === 404 || errorData.error?.message?.toLowerCase().includes('model')) {
+          return {
+            isValid: false,
+            error: `Model "${model}" not found or not available. Please verify the model name is correct.`
+          };
+        }
+        
         // Provide detailed error message
         const errorMessage = errorData.error?.message || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
         return {
@@ -105,7 +157,10 @@ class APIKeyService {
 
       return { isValid: true, model };
     } catch (error: any) {
-      return { isValid: false, error: error.message || 'Validation failed' };
+      return { 
+        isValid: false, 
+        error: error.message || 'Validation failed. Please check your API key and model name.' 
+      };
     }
   }
 
@@ -130,9 +185,36 @@ class APIKeyService {
       const data = await response.json();
       const modelAvailable = data.data?.some((m: any) => m.id === model);
       
+      // Handle deprecated models
+      if (!modelAvailable) {
+        // Check for deprecated model mappings
+        const deprecatedModels: Record<string, string> = {
+          'gpt-3.5-turbo-16k': 'gpt-3.5-turbo',  // Deprecated, use gpt-3.5-turbo
+          'gpt-4-turbo': 'gpt-4-turbo-preview'   // May need version suffix
+        };
+        
+        if (deprecatedModels[model]) {
+          const alternative = deprecatedModels[model];
+          const alternativeAvailable = data.data?.some((m: any) => m.id === alternative || m.id.startsWith(alternative));
+          
+          if (alternativeAvailable) {
+            return {
+              isValid: false,
+              error: `Model "${model}" is deprecated. Please use "${alternative}" instead.`,
+              model: alternative
+            };
+          }
+        }
+        
+        return {
+          isValid: false,
+          error: `Model "${model}" not found or not available in your account. Please verify the model name.`
+        };
+      }
+      
       return {
         isValid: true,
-        model: modelAvailable ? model : 'gpt-3.5-turbo' // Fallback to available model
+        model: model
       };
     } catch (error: any) {
       return { isValid: false, error: error.message || 'Validation failed' };

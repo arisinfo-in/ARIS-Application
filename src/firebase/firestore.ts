@@ -22,6 +22,11 @@ export interface User {
   role: 'user' | 'admin';
   createdAt: string;
   photoURL?: string;
+  phoneNumber?: string;
+  phoneVerified?: boolean;
+  trialStartDate?: string;
+  trialEndDate?: string;
+  trialActive?: boolean;
 }
 
 // AI Session types
@@ -60,6 +65,7 @@ export interface Test {
   isCustom?: boolean;
   isDynamic?: boolean;
   topics?: string;
+  level?: 'beginner' | 'intermediate' | 'advanced';
 }
 
 export interface TestAttempt {
@@ -99,6 +105,61 @@ export interface PythonNotebook {
   cells: NotebookCell[];
   createdAt: string;
   updatedAt: string;
+}
+
+// Job types
+export interface Job {
+  id: string;
+  platform: 'LinkedIn' | 'Naukri' | 'Indeed';
+  // LinkedIn API fields
+  linkedinId?: string;
+  // Indeed API fields
+  indeedId?: string;
+  date_posted: string;
+  date_created: string;
+  title: string;
+  organization: string;
+  organization_url?: string;
+  date_validthrough?: string;
+  locations_raw?: any[];
+  salary_raw?: any;
+  employment_type?: string[];
+  url: string;
+  source_type?: string;
+  source?: string;
+  source_domain?: string;
+  organization_logo?: string;
+  cities_derived?: string[];
+  counties_derived?: string[];
+  regions_derived?: string[];
+  countries_derived?: string[];
+  locations_derived?: string[];
+  timezones_derived?: string[];
+  lats_derived?: number[];
+  lngs_derived?: number[];
+  remote_derived?: boolean;
+  linkedin_org_employees?: number;
+  linkedin_org_url?: string;
+  linkedin_org_size?: string;
+  linkedin_org_slogan?: string;
+  linkedin_org_industry?: string;
+  linkedin_org_followers?: number;
+  linkedin_org_headquarters?: string;
+  linkedin_org_type?: string;
+  linkedin_org_foundeddate?: string;
+  linkedin_org_specialties?: string[];
+  linkedin_org_locations?: string[];
+  linkedin_org_description?: string;
+  linkedin_org_recruitment_agency_derived?: boolean;
+  seniority?: string;
+  directapply?: boolean;
+  linkedin_org_slug?: string;
+  external_apply_url?: string;
+  description_text?: string;
+  // Metadata
+  syncedAt: string;
+  syncedBy: string;
+  createdAt: string;
 }
 
 // Firestore operations
@@ -206,6 +267,78 @@ export const firestoreOperations = {
     
     const attemptsSnapshot = await getDocs(attemptsQuery);
     return attemptsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestAttempt));
+  },
+
+  async getAllTestAttempts(): Promise<TestAttempt[]> {
+    const attemptsQuery = query(
+      collection(db, 'testAttempts'),
+      orderBy('finishedAt', 'desc')
+    );
+    
+    const attemptsSnapshot = await getDocs(attemptsQuery);
+    return attemptsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestAttempt));
+  },
+
+  // Jobs
+  async createJob(job: Omit<Job, 'id'>): Promise<string> {
+    const docRef = await addDoc(collection(db, 'jobs'), job);
+    return docRef.id;
+  },
+
+  async getJobs(platform?: string): Promise<Job[]> {
+    let jobsQuery;
+    
+    if (platform) {
+      jobsQuery = query(
+        collection(db, 'jobs'),
+        where('platform', '==', platform),
+        orderBy('date_posted', 'desc')
+      );
+    } else {
+      jobsQuery = query(
+        collection(db, 'jobs'),
+        orderBy('date_posted', 'desc')
+      );
+    }
+    
+    const jobsSnapshot = await getDocs(jobsQuery);
+    return jobsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Job));
+  },
+
+  async getJob(jobId: string): Promise<Job | null> {
+    const jobDoc = await getDoc(doc(db, 'jobs', jobId));
+    if (!jobDoc.exists()) return null;
+    return { id: jobDoc.id, ...jobDoc.data() } as Job;
+  },
+
+  async getJobByLinkedInId(linkedinId: string): Promise<Job | null> {
+    const jobsQuery = query(
+      collection(db, 'jobs'),
+      where('linkedinId', '==', linkedinId),
+      where('platform', '==', 'LinkedIn'),
+      limit(1)
+    );
+    
+    const jobsSnapshot = await getDocs(jobsQuery);
+    if (jobsSnapshot.empty) return null;
+    return { id: jobsSnapshot.docs[0].id, ...jobsSnapshot.docs[0].data() } as Job;
+  },
+
+  async getJobByIndeedId(indeedId: string): Promise<Job | null> {
+    const jobsQuery = query(
+      collection(db, 'jobs'),
+      where('indeedId', '==', indeedId),
+      where('platform', '==', 'Indeed'),
+      limit(1)
+    );
+    
+    const jobsSnapshot = await getDocs(jobsQuery);
+    if (jobsSnapshot.empty) return null;
+    return { id: jobsSnapshot.docs[0].id, ...jobsSnapshot.docs[0].data() } as Job;
+  },
+
+  async deleteJob(jobId: string): Promise<void> {
+    await deleteDoc(doc(db, 'jobs', jobId));
   },
 
   // Study Plans
@@ -396,6 +529,41 @@ export const firestoreOperations = {
       await updateDoc(doc(db, 'userApiKeys', keyId), {
         usageCount: (currentData.usageCount || 0) + 1,
         lastUsed: new Date().toISOString()
+      });
+    }
+  },
+
+  // Update user phone number and trial information
+  async updateUserPhone(userId: string, phoneNumber: string): Promise<void> {
+    const now = new Date();
+    const trialEndDate = new Date(now);
+    trialEndDate.setDate(trialEndDate.getDate() + 15); // 15 days free trial
+    
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    
+    // If user document doesn't exist, create it first
+    if (!userSnap.exists()) {
+      await setDoc(userRef, {
+        uid: userId,
+        phoneNumber,
+        phoneVerified: true,
+        trialStartDate: now.toISOString(),
+        trialEndDate: trialEndDate.toISOString(),
+        trialActive: true,
+        role: 'user',
+        createdAt: now.toISOString(),
+        name: '',
+        email: ''
+      });
+    } else {
+      // Update existing user document
+      await updateDoc(userRef, {
+        phoneNumber,
+        phoneVerified: true,
+        trialStartDate: now.toISOString(),
+        trialEndDate: trialEndDate.toISOString(),
+        trialActive: true
       });
     }
   }

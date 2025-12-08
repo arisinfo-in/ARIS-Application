@@ -25,9 +25,10 @@ export const PROVIDER_MODELS: Record<APIProvider, string[]> = {
   openai: [
     'gpt-4',
     'gpt-4-turbo',
+    'gpt-4-turbo-preview',
     'gpt-4o',
-    'gpt-3.5-turbo',
-    'gpt-3.5-turbo-16k'
+    'gpt-4o-mini',
+    'gpt-3.5-turbo'
   ]
 };
 

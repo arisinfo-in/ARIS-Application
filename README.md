@@ -37,7 +37,7 @@ A comprehensive React-based learning platform designed to teach data analysis sk
    ```
 
 3. **Set up environment variables**
-   Create a `.env` file in the root directory:
+   Create a `.env` file in the root directory (copy from `.env.example`):
    ```env
    VITE_FIREBASE_API_KEY=your_firebase_api_key
    VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
@@ -48,6 +48,10 @@ A comprehensive React-based learning platform designed to teach data analysis sk
    VITE_FIREBASE_APP_ID=your_firebase_app_id
    VITE_FIREBASE_MEASUREMENT_ID=your_firebase_measurement_id
    VITE_GEMINI_API_KEY=your_gemini_api_key
+   VITE_RAPIDAPI_KEY=your_linkedin_rapidapi_key
+   VITE_RAPIDAPI_HOST=linkedin-job-search-api.p.rapidapi.com
+   VITE_INDEED_RAPIDAPI_KEY=your_indeed_rapidapi_key
+   VITE_INDEED_RAPIDAPI_HOST=indeed12.p.rapidapi.com
    ```
 
 4. **Start the development server**

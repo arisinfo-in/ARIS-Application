@@ -7,17 +7,17 @@ import { firestoreOperations, User, Test } from '../firebase/firestore';
 import { format } from 'date-fns';
 
 const AdminPanel: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { userProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState<User[]>([]);
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (userProfile?.role === 'admin') {
       loadData();
     }
-  }, [isAdmin]);
+  }, [userProfile?.role]);
 
   const loadData = async () => {
     setLoading(true);
@@ -36,7 +36,7 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  if (!isAdmin) {
+  if (userProfile?.role !== 'admin') {
     return (
       <div className="p-6">
         <NeumorphicCard padding="xl" className="text-center">

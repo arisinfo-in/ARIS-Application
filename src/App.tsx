@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { APIKeyProvider } from './contexts/APIKeyContext';
@@ -6,6 +6,12 @@ import Login from './pages/Login';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import QuickLoader from './components/QuickLoader';
+import AdminLayout from './components/AdminLayout';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminUsers from './pages/AdminUsers';
+import AdminTests from './pages/AdminTests';
+import AdminTestDetail from './pages/AdminTestDetail';
+import AdminJobs from './pages/AdminJobs';
 
 // Import frequently used pages directly for better performance
 import Dashboard from './pages/Dashboard';
@@ -41,17 +47,16 @@ import IndustryDetail from './pages/IndustryDetail';
 import AITools from './pages/AITools';
 import StandardProjects from './pages/StandardProjects';
 import ProjectDetail from './pages/ProjectDetail';
+import JobFinder from './pages/JobFinder';
 
 // Lazy load less frequently used pages with preloading
 const TestAttempt = lazy(() => import('./pages/TestAttempt'));
 const TestResults = lazy(() => import('./pages/TestResults'));
-const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 
 // Preload components for better performance
 const preloadComponents = () => {
   import('./pages/TestAttempt');
   import('./pages/TestResults');
-  import('./pages/AdminPanel');
 };
 
 // Scroll to top component
@@ -91,6 +96,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
       </div>
     </div>
   );
+};
+
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return <AdminLayout>{children}</AdminLayout>;
 };
 
 const App: React.FC = () => {
@@ -374,6 +383,14 @@ const App: React.FC = () => {
               }
             />
             <Route
+              path="/job-finder"
+              element={
+                <ProtectedRoute>
+                  <JobFinder />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/news/job-kit/strategy/:strategyType"
               element={
                 <ProtectedRoute>
@@ -384,9 +401,41 @@ const App: React.FC = () => {
             <Route
               path="/admin"
               element={
-                <ProtectedRoute>
-                  <AdminPanel />
-                </ProtectedRoute>
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <AdminRoute>
+                  <AdminUsers />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/tests"
+              element={
+                <AdminRoute>
+                  <AdminTests />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/tests/:testId"
+              element={
+                <AdminRoute>
+                  <AdminTestDetail />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/jobs"
+              element={
+                <AdminRoute>
+                  <AdminJobs />
+                </AdminRoute>
               }
             />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
