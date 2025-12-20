@@ -4,11 +4,11 @@ import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
 import { firestoreOperations, Job } from '../firebase/firestore';
 import { linkedinJobsService, LinkedInJobSearchParams } from '../services/linkedinJobsService';
-import { indeedJobsService, IndeedJobSearchParams } from '../services/indeedJobsService';
+import { googleJobsService, GoogleJobSearchParams } from '../services/googleJobsService';
 import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
 
-type Platform = 'LinkedIn' | 'Naukri' | 'Indeed';
+type Platform = 'LinkedIn' | 'GoogleJobs';
 
 const AdminJobs: React.FC = () => {
   const { user } = useAuth();
@@ -23,7 +23,7 @@ const AdminJobs: React.FC = () => {
 
   // Get API keys from environment
   const linkedinApiKey = import.meta.env.VITE_RAPIDAPI_KEY || '';
-  const indeedApiKey = import.meta.env.VITE_INDEED_RAPIDAPI_KEY || '';
+  const googleJobsApiKey = import.meta.env.VITE_GOOGLE_JOBS_RAPIDAPI_KEY || '';
 
   // LinkedIn Search Parameters
   const [linkedinSearchParams, setLinkedinSearchParams] = useState<LinkedInJobSearchParams>({
@@ -34,15 +34,14 @@ const AdminJobs: React.FC = () => {
     description_type: 'text'
   });
 
-  // Indeed Search Parameters
-  const [indeedSearchParams, setIndeedSearchParams] = useState<IndeedJobSearchParams>({
+  // Google Jobs Search Parameters
+  const [googleJobsSearchParams, setGoogleJobsSearchParams] = useState<GoogleJobSearchParams>({
     query: 'Data Analyst',
-    location: 'Hyderabad, India',
-    page_id: 1,
-    locality: 'in',
-    fromage: 7,
-    radius: 50,
-    sort: 'date'
+    page: 1,
+    num_pages: 1,
+    country: 'in',
+    language: 'en',
+    date_posted: 'all'
   });
 
   const loadJobs = async () => {
@@ -63,15 +62,6 @@ const AdminJobs: React.FC = () => {
 
 
   const handleSyncJobs = async () => {
-    // Handle Naukri (not implemented yet)
-    if (activePlatform === 'Naukri') {
-      setSyncResult({ 
-        success: false, 
-        message: 'Naukri integration is coming soon. Sync functionality will be available once implemented.' 
-      });
-      return;
-    }
-
     // Handle LinkedIn
     if (activePlatform === 'LinkedIn') {
       if (!linkedinApiKey) {
@@ -188,10 +178,10 @@ const AdminJobs: React.FC = () => {
       return;
     }
 
-    // Handle Indeed
-    if (activePlatform === 'Indeed') {
-      if (!indeedApiKey) {
-        setSyncResult({ success: false, message: 'Indeed RapidAPI key not found. Please add VITE_INDEED_RAPIDAPI_KEY to your .env file.' });
+    // Handle Google Jobs
+    if (activePlatform === 'GoogleJobs') {
+      if (!googleJobsApiKey) {
+        setSyncResult({ success: false, message: 'Google Jobs RapidAPI key not found. Please add VITE_GOOGLE_JOBS_RAPIDAPI_KEY to your .env file.' });
         return;
       }
 
@@ -200,20 +190,22 @@ const AdminJobs: React.FC = () => {
       setSyncResult(null);
 
       try {
-        const maxJobs = 15; // Indeed returns ~15 jobs per page
+        const numPages = googleJobsSearchParams.num_pages || 1;
+        const jobsPerPage = 10;
+        const maxJobs = numPages * jobsPerPage;
         setSyncProgress({ current: 0, total: maxJobs });
 
-        console.log('Fetching Indeed jobs with params:', indeedSearchParams);
+        console.log('Fetching Google Jobs with params:', googleJobsSearchParams);
 
-        // Fetch jobs from Indeed API
-        const response = await indeedJobsService.fetchJobs(
-          indeedSearchParams,
-          indeedApiKey
+        // Fetch jobs from Google Jobs API
+        const response = await googleJobsService.fetchJobs(
+          googleJobsSearchParams,
+          googleJobsApiKey
         );
 
-        console.log('Indeed API response:', response);
+        console.log('Google Jobs API response:', response);
 
-        const allJobs = response.hits;
+        const allJobs = response.data;
         setSyncProgress({ current: allJobs.length, total: maxJobs });
 
         // Store jobs in Firestore
@@ -224,31 +216,38 @@ const AdminJobs: React.FC = () => {
         for (const job of allJobs) {
           try {
             // Check if job already exists
-            const existingJob = await firestoreOperations.getJobByIndeedId(job.id);
+            const existingJob = await firestoreOperations.getJobByGoogleJobsId(job.job_id);
             
             if (existingJob) {
               skipped++;
               continue;
             }
 
-            // Convert Indeed job to our Job format
+            // Convert Google Jobs job to our Job format
             const jobData: Omit<Job, 'id'> = {
-              platform: 'Indeed',
-              indeedId: job.id,
-              title: job.title,
-              organization: job.company_name,
-              url: `https://www.indeed.com${job.link}`,
-              date_posted: new Date(job.pub_date_ts_milli).toISOString(),
+              platform: 'GoogleJobs',
+              googleJobsId: job.job_id,
+              title: job.job_title,
+              organization: job.employer_name,
+              organization_url: job.employer_website,
+              organization_logo: job.employer_logo,
+              url: job.job_apply_link,
+              date_posted: job.job_posted_at_datetime_utc || new Date().toISOString(),
               date_created: new Date().toISOString(),
-              // Indeed-specific fields
-              company_name: job.company_name,
-              formatted_relative_time: job.formatted_relative_time,
-              indeed_link: job.link,
-              indeed_locality: job.locality,
-              pub_date_ts_milli: job.pub_date_ts_milli,
-              indeed_salary: job.salary,
-              // Map location
-              locations_derived: [job.location],
+              employment_type: job.job_employment_types || [job.job_employment_type],
+              remote_derived: job.job_is_remote,
+              locations_derived: job.job_location ? [job.job_location] : [],
+              cities_derived: job.job_city ? [job.job_city] : [],
+              countries_derived: job.job_country ? [job.job_country] : [],
+              description_text: job.job_description,
+              // Google Jobs specific fields
+              job_publisher: job.job_publisher,
+              job_apply_is_direct: job.job_apply_is_direct,
+              job_min_salary: job.job_min_salary,
+              job_max_salary: job.job_max_salary,
+              job_salary_period: job.job_salary_period,
+              job_benefits: job.job_benefits,
+              job_highlights: job.job_highlights,
               // Metadata
               syncedAt: now,
               syncedBy: user?.uid || 'unknown',
@@ -264,7 +263,7 @@ const AdminJobs: React.FC = () => {
 
         setSyncResult({
           success: true,
-          message: `Indeed sync complete! Saved ${saved} new jobs, skipped ${skipped} duplicates.`
+          message: `Google Jobs sync complete! Saved ${saved} new jobs, skipped ${skipped} duplicates.`
         });
 
         // Reload jobs
@@ -272,7 +271,7 @@ const AdminJobs: React.FC = () => {
       } catch (error: any) {
         setSyncResult({
           success: false,
-          message: error.message || 'Failed to sync Indeed jobs'
+          message: error.message || 'Failed to sync Google Jobs'
         });
       } finally {
         setSyncing(false);
@@ -326,33 +325,35 @@ const AdminJobs: React.FC = () => {
               variant="accent"
               icon={RefreshCw}
               onClick={handleSyncJobs}
-              disabled={
+                disabled={
                 syncing || 
                 (activePlatform === 'LinkedIn' && !linkedinApiKey) ||
-                (activePlatform === 'Indeed' && !indeedApiKey) ||
-                activePlatform === 'Naukri'
+                (activePlatform === 'GoogleJobs' && !googleJobsApiKey)
               }
             >
-              {syncing ? 'Syncing...' : `Sync ${activePlatform} Jobs`}
+              {syncing ? 'Syncing...' : `Sync ${activePlatform === 'GoogleJobs' ? 'All Jobs' : activePlatform} Jobs`}
             </NeumorphicButton>
           </div>
         </div>
 
         {/* Platform Tabs */}
         <div className="flex gap-2 mb-6">
-          {(['LinkedIn', 'Naukri', 'Indeed'] as Platform[]).map((platform) => (
-            <button
-              key={platform}
-              onClick={() => setActivePlatform(platform)}
-              className={`px-6 py-3 rounded-xl font-medium transition-all ${
-                activePlatform === platform
-                  ? 'bg-orange-gradient text-gray-100 shadow-[8px_8px_16px_rgba(249,115,22,0.3),-8px_-8px_16px_rgba(255,255,255,0.1)]'
-                  : 'bg-gray-800 text-gray-300 hover:text-orange-400 hover:bg-gray-700'
-              }`}
-            >
-              {platform}
-            </button>
-          ))}
+          {(['LinkedIn', 'GoogleJobs'] as Platform[]).map((platform) => {
+            const displayName = platform === 'GoogleJobs' ? 'All Jobs' : platform;
+            return (
+              <button
+                key={platform}
+                onClick={() => setActivePlatform(platform)}
+                className={`px-6 py-3 rounded-xl font-medium transition-all ${
+                  activePlatform === platform
+                    ? 'bg-orange-gradient text-gray-100 shadow-[8px_8px_16px_rgba(249,115,22,0.3),-8px_-8px_16px_rgba(255,255,255,0.1)]'
+                    : 'bg-gray-800 text-gray-300 hover:text-orange-400 hover:bg-gray-700'
+                }`}
+              >
+                {displayName}
+              </button>
+            );
+          })}
         </div>
 
         {/* Sync Status */}
@@ -515,7 +516,7 @@ const AdminJobs: React.FC = () => {
               </div>
             )}
 
-            {activePlatform === 'Indeed' && (
+            {activePlatform === 'GoogleJobs' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -523,54 +524,80 @@ const AdminJobs: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={indeedSearchParams.query}
-                    onChange={(e) => setIndeedSearchParams({ ...indeedSearchParams, query: e.target.value })}
-                    placeholder="e.g., Data Analyst"
+                    value={googleJobsSearchParams.query}
+                    onChange={(e) => setGoogleJobsSearchParams({ ...googleJobsSearchParams, query: e.target.value })}
+                    placeholder="e.g., Data Analyst in Hyderabad"
                     className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Location
+                    Country Code
                   </label>
                   <input
                     type="text"
-                    value={indeedSearchParams.location || ''}
-                    onChange={(e) => setIndeedSearchParams({ ...indeedSearchParams, location: e.target.value || undefined })}
-                    placeholder="e.g., Hyderabad, India"
+                    value={googleJobsSearchParams.country || ''}
+                    onChange={(e) => setGoogleJobsSearchParams({ ...googleJobsSearchParams, country: e.target.value || undefined })}
+                    placeholder="e.g., in, us, uk (ISO 3166-1 alpha-2)"
                     className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Locality (Country)
+                    Language Code
+                  </label>
+                  <input
+                    type="text"
+                    value={googleJobsSearchParams.language || ''}
+                    onChange={(e) => setGoogleJobsSearchParams({ ...googleJobsSearchParams, language: e.target.value || undefined })}
+                    placeholder="e.g., en (ISO 639)"
+                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Date Posted
                   </label>
                   <select
-                    value={indeedSearchParams.locality || 'in'}
-                    onChange={(e) => setIndeedSearchParams({ ...indeedSearchParams, locality: e.target.value })}
+                    value={googleJobsSearchParams.date_posted || 'all'}
+                    onChange={(e) => setGoogleJobsSearchParams({ ...googleJobsSearchParams, date_posted: e.target.value as any })}
                     className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
                   >
-                    <option value="in">India</option>
-                    <option value="us">United States</option>
-                    <option value="uk">United Kingdom</option>
-                    <option value="ca">Canada</option>
-                    <option value="au">Australia</option>
+                    <option value="all">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="3days">Last 3 Days</option>
+                    <option value="week">Last Week</option>
+                    <option value="month">Last Month</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Days Ago (fromage)
+                    Number of Pages
                   </label>
                   <input
                     type="number"
                     min="1"
-                    max="30"
-                    value={indeedSearchParams.fromage || 7}
-                    onChange={(e) => setIndeedSearchParams({ ...indeedSearchParams, fromage: Number(e.target.value) })}
+                    max="50"
+                    value={googleJobsSearchParams.num_pages || 1}
+                    onChange={(e) => setGoogleJobsSearchParams({ ...googleJobsSearchParams, num_pages: Number(e.target.value) })}
                     className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Employment Types
+                  </label>
+                  <input
+                    type="text"
+                    value={googleJobsSearchParams.employment_types || ''}
+                    onChange={(e) => setGoogleJobsSearchParams({ ...googleJobsSearchParams, employment_types: e.target.value || undefined })}
+                    placeholder="FULLTIME, CONTRACTOR, PARTTIME, INTERN"
+                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
@@ -581,36 +608,23 @@ const AdminJobs: React.FC = () => {
                   <input
                     type="number"
                     min="0"
-                    max="100"
-                    value={indeedSearchParams.radius || 50}
-                    onChange={(e) => setIndeedSearchParams({ ...indeedSearchParams, radius: Number(e.target.value) })}
+                    value={googleJobsSearchParams.radius || ''}
+                    onChange={(e) => setGoogleJobsSearchParams({ ...googleJobsSearchParams, radius: e.target.value ? Number(e.target.value) : undefined })}
                     className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Job Type
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={googleJobsSearchParams.work_from_home || false}
+                      onChange={(e) => setGoogleJobsSearchParams({ ...googleJobsSearchParams, work_from_home: e.target.checked || undefined })}
+                      className="w-4 h-4 rounded"
+                    />
+                    Work From Home Only
                   </label>
-                  <select
-                    value={indeedSearchParams.job_type || ''}
-                    onChange={(e) => setIndeedSearchParams({ ...indeedSearchParams, job_type: e.target.value as any || undefined })}
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  >
-                    <option value="">All Types</option>
-                    <option value="permanent">Permanent</option>
-                    <option value="contract">Contract</option>
-                    <option value="temporary">Temporary</option>
-                    <option value="internship">Internship</option>
-                    <option value="apprenticeship">Apprenticeship</option>
-                  </select>
                 </div>
-              </div>
-            )}
-
-            {activePlatform === 'Naukri' && (
-              <div className="text-center py-8">
-                <p className="text-gray-400">Naukri filters will be available once integration is implemented.</p>
               </div>
             )}
           </NeumorphicCard>
@@ -649,24 +663,20 @@ const AdminJobs: React.FC = () => {
             <Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-300 text-lg mb-2">
               {jobs.length === 0 
-                ? activePlatform === 'LinkedIn'
-                  ? 'No jobs found'
-                  : `${activePlatform} integration coming soon`
+                ? 'No jobs found'
                 : 'No jobs match your search'}
             </p>
             <p className="text-gray-400 text-sm mb-4">
               {jobs.length === 0
-                ? activePlatform === 'LinkedIn'
-                  ? 'Click "Sync LinkedIn Jobs" to fetch jobs from LinkedIn API'
-                  : `We're working on integrating ${activePlatform} jobs. The sync button will be available once implemented.`
+                ? `Click "Sync ${activePlatform === 'GoogleJobs' ? 'All Jobs' : activePlatform} Jobs" to fetch jobs from ${activePlatform === 'LinkedIn' ? 'LinkedIn' : 'All Jobs'} API`
                 : 'Try adjusting your search query'}
             </p>
-            {jobs.length === 0 && activePlatform === 'LinkedIn' && (
+            {jobs.length === 0 && (
               <NeumorphicButton
                 variant="accent"
                 icon={RefreshCw}
                 onClick={handleSyncJobs}
-                disabled={syncing || (activePlatform === 'LinkedIn' && !linkedinApiKey) || (activePlatform === 'Indeed' && !indeedApiKey) || activePlatform === 'Naukri'}
+                disabled={syncing || (activePlatform === 'LinkedIn' && !linkedinApiKey) || (activePlatform === 'GoogleJobs' && !googleJobsApiKey)}
               >
                 Sync Jobs Now
               </NeumorphicButton>

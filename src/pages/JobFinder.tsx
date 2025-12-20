@@ -6,7 +6,7 @@ import NeumorphicButton from '../components/NeumorphicButton';
 import { firestoreOperations, Job } from '../firebase/firestore';
 import { format } from 'date-fns';
 
-type Platform = 'LinkedIn' | 'Naukri' | 'Indeed';
+type Platform = 'LinkedIn' | 'GoogleJobs';
 
 const JobFinder: React.FC = () => {
   const navigate = useNavigate();
@@ -125,19 +125,22 @@ const JobFinder: React.FC = () => {
 
         {/* Platform Tabs */}
         <div className="flex gap-2 mb-6">
-          {(['LinkedIn'] as Platform[]).map((platform) => (
-            <button
-              key={platform}
-              onClick={() => setActivePlatform(platform)}
-              className={`px-6 py-3 rounded-xl font-medium transition-all ${
-                activePlatform === platform
-                  ? 'bg-orange-gradient text-gray-100 shadow-[8px_8px_16px_rgba(249,115,22,0.3),-8px_-8px_16px_rgba(255,255,255,0.1)]'
-                  : 'bg-gray-800 text-gray-300 hover:text-orange-400 hover:bg-gray-700'
-              }`}
-            >
-              {platform}
-            </button>
-          ))}
+          {(['LinkedIn', 'GoogleJobs'] as Platform[]).map((platform) => {
+            const displayName = platform === 'GoogleJobs' ? 'All Jobs' : platform;
+            return (
+              <button
+                key={platform}
+                onClick={() => setActivePlatform(platform)}
+                className={`px-6 py-3 rounded-xl font-medium transition-all ${
+                  activePlatform === platform
+                    ? 'bg-orange-gradient text-gray-100 shadow-[8px_8px_16px_rgba(249,115,22,0.3),-8px_-8px_16px_rgba(255,255,255,0.1)]'
+                    : 'bg-gray-800 text-gray-300 hover:text-orange-400 hover:bg-gray-700'
+                }`}
+              >
+                {displayName}
+              </button>
+            );
+          })}
         </div>
 
         {/* Search Bar */}
@@ -234,16 +237,12 @@ const JobFinder: React.FC = () => {
           <Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-300 text-lg mb-2">
             {jobs.length === 0 
-              ? activePlatform === 'LinkedIn'
-                ? 'No jobs available'
-                : `${activePlatform} integration coming soon`
+              ? 'No jobs available'
               : 'No jobs match your filters'}
           </p>
           <p className="text-gray-400 text-sm">
             {jobs.length === 0
-              ? activePlatform === 'LinkedIn'
-                ? 'Jobs will appear here once synced by admin'
-                : `We're working on integrating ${activePlatform} jobs. Check back soon!`
+              ? 'Jobs will appear here once synced by admin'
               : 'Try adjusting your search or filters'}
           </p>
           {activeFiltersCount > 0 && (

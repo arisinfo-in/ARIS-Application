@@ -110,11 +110,22 @@ export interface PythonNotebook {
 // Job types
 export interface Job {
   id: string;
-  platform: 'LinkedIn' | 'Naukri' | 'Indeed';
+  platform: 'LinkedIn' | 'GoogleJobs';
   // LinkedIn API fields
   linkedinId?: string;
-  // Indeed API fields
-  indeedId?: string;
+  // Google Jobs API fields
+  googleJobsId?: string;
+  job_publisher?: string;
+  job_apply_is_direct?: boolean;
+  job_min_salary?: number | null;
+  job_max_salary?: number | null;
+  job_salary_period?: string | null;
+  job_benefits?: string[] | null;
+  job_highlights?: {
+    Qualifications?: string[];
+    Benefits?: string[];
+    Responsibilities?: string[];
+  };
   date_posted: string;
   date_created: string;
   title: string;
@@ -324,11 +335,11 @@ export const firestoreOperations = {
     return { id: jobsSnapshot.docs[0].id, ...jobsSnapshot.docs[0].data() } as Job;
   },
 
-  async getJobByIndeedId(indeedId: string): Promise<Job | null> {
+  async getJobByGoogleJobsId(googleJobsId: string): Promise<Job | null> {
     const jobsQuery = query(
       collection(db, 'jobs'),
-      where('indeedId', '==', indeedId),
-      where('platform', '==', 'Indeed'),
+      where('googleJobsId', '==', googleJobsId),
+      where('platform', '==', 'GoogleJobs'),
       limit(1)
     );
     
