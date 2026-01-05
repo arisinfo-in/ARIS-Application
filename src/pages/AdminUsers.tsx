@@ -4,7 +4,7 @@ import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
 import UserDetailModal from '../components/UserDetailModal';
 import { firestoreOperations, User } from '../firebase/firestore';
-import { format } from 'date-fns';
+import { safeFormatDate } from '../utils/dateFormat';
 
 const AdminUsers: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -134,7 +134,7 @@ const AdminUsers: React.FC = () => {
                     <h3 className="font-semibold text-gray-100">{user.name}</h3>
                     <p className="text-gray-200">{user.email}</p>
                     <p className="text-sm text-gray-300">
-                      Joined {format(new Date(user.createdAt), 'MMM d, yyyy')}
+                      Joined {safeFormatDate(user.createdAt, 'MMM d, yyyy', 'date unavailable')}
                     </p>
                   </div>
                 </div>

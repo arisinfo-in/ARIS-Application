@@ -17,7 +17,8 @@ import {
 import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
 import { firestoreOperations, Test, TestAttempt } from '../firebase/firestore';
-import { format, subDays, isAfter, isBefore } from 'date-fns';
+import { subDays, isAfter, isBefore } from 'date-fns';
+import { safeFormatDate } from '../utils/dateFormat';
 
 type SortOption = 'newest' | 'oldest' | 'most-questions' | 'least-questions' | 'alphabetical';
 type DateRange = 'all' | '7days' | '30days' | '90days' | 'custom';
@@ -599,7 +600,7 @@ const AdminTests: React.FC = () => {
                         <span className="px-2 py-1 bg-gray-700 rounded">
                           {test.isDefault ? 'Default' : test.isCustom ? 'Custom' : test.isDynamic ? 'Dynamic' : 'N/A'}
                         </span>
-                        <span>Created {format(new Date(test.createdAt), 'MMM d, yyyy')}</span>
+                        <span>Created {safeFormatDate(test.createdAt, 'MMM d, yyyy', 'date unavailable')}</span>
                         {metrics && metrics.attempts > 0 && (
                           <>
                             <span className="text-green-400">Avg: {metrics.avgScore}%</span>

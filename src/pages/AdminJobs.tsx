@@ -6,7 +6,7 @@ import { firestoreOperations, Job } from '../firebase/firestore';
 import { linkedinJobsService, LinkedInJobSearchParams } from '../services/linkedinJobsService';
 import { googleJobsService, GoogleJobSearchParams } from '../services/googleJobsService';
 import { useAuth } from '../contexts/AuthContext';
-import { format } from 'date-fns';
+import { safeFormatDate } from '../utils/dateFormat';
 
 type Platform = 'LinkedIn' | 'GoogleJobs';
 
@@ -723,7 +723,7 @@ const AdminJobs: React.FC = () => {
                         </span>
                       )}
                       <span className="text-gray-400">
-                        Posted {format(new Date(job.date_posted), 'MMM d, yyyy')}
+                        Posted {safeFormatDate(job.date_posted, 'MMM d, yyyy', 'date unavailable')}
                       </span>
                     </div>
                     {job.description_text && (

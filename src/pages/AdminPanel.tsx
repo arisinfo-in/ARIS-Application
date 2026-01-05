@@ -4,7 +4,7 @@ import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
 import { useAuth } from '../contexts/AuthContext';
 import { firestoreOperations, User, Test } from '../firebase/firestore';
-import { format } from 'date-fns';
+import { safeFormatDate } from '../utils/dateFormat';
 
 const AdminPanel: React.FC = () => {
   const { userProfile } = useAuth();
@@ -84,7 +84,7 @@ const AdminPanel: React.FC = () => {
                   <h3 className="font-semibold text-gray-100">{user.name}</h3>
                   <p className="text-gray-200">{user.email}</p>
                   <p className="text-sm text-gray-300">
-                    Joined {format(new Date(user.createdAt), 'MMM d, yyyy')}
+                    Joined {safeFormatDate(user.createdAt, 'MMM d, yyyy', 'date unavailable')}
                   </p>
                 </div>
               </div>
@@ -128,7 +128,7 @@ const AdminPanel: React.FC = () => {
                   </span>
                   <span>{test.questions.length} questions</span>
                   <span>{test.isDefault ? 'Default' : 'Custom'}</span>
-                  <span>Created {format(new Date(test.createdAt), 'MMM d, yyyy')}</span>
+                  <span>Created {safeFormatDate(test.createdAt, 'MMM d, yyyy', 'date unavailable')}</span>
                 </div>
               </div>
               <div className="flex items-center gap-3">

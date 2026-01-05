@@ -4,7 +4,7 @@ import { ArrowLeft, FileText, Calendar, User, BookOpen, CheckCircle, ChevronDown
 import NeumorphicCard from '../components/NeumorphicCard';
 import NeumorphicButton from '../components/NeumorphicButton';
 import { firestoreOperations, Test } from '../firebase/firestore';
-import { format } from 'date-fns';
+import { safeFormatDate } from '../utils/dateFormat';
 
 const AdminTestDetail: React.FC = () => {
   const { testId } = useParams<{ testId: string }>();
@@ -120,7 +120,7 @@ const AdminTestDetail: React.FC = () => {
           <div className="flex-1">
             <p className="text-sm text-gray-400 mb-1">Created Date</p>
             <p className="text-gray-100 font-medium">
-              {format(new Date(test.createdAt), 'MMMM d, yyyy')}
+              {safeFormatDate(test.createdAt, 'MMMM d, yyyy', 'Date unavailable')}
             </p>
           </div>
         </div>

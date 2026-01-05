@@ -3,7 +3,7 @@ import { X, User, Mail, Phone, Shield, Calendar, CheckCircle, XCircle } from 'lu
 import NeumorphicCard from './NeumorphicCard';
 import NeumorphicButton from './NeumorphicButton';
 import { User as UserType } from '../firebase/firestore';
-import { format } from 'date-fns';
+import { safeFormatDate } from '../utils/dateFormat';
 
 interface UserDetailModalProps {
   user: UserType | null;
@@ -144,7 +144,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, isOpen, onClose
               <div className="flex-1">
                 <p className="text-sm text-gray-400 mb-1">Joined Date</p>
                 <p className="text-gray-100 font-medium">
-                  {format(new Date(user.createdAt), 'MMMM d, yyyy')}
+                  {safeFormatDate(user.createdAt, 'MMMM d, yyyy', 'Date unavailable')}
                 </p>
               </div>
             </div>
@@ -168,7 +168,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, isOpen, onClose
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-gray-400">Trial Start</p>
                       <p className="text-gray-100 font-medium">
-                        {format(new Date(user.trialStartDate), 'MMM d, yyyy')}
+                        {safeFormatDate(user.trialStartDate, 'MMM d, yyyy', 'Date unavailable')}
                       </p>
                     </div>
                   )}
@@ -176,7 +176,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, isOpen, onClose
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-gray-400">Trial End</p>
                       <p className="text-gray-100 font-medium">
-                        {format(new Date(user.trialEndDate), 'MMM d, yyyy')}
+                        {safeFormatDate(user.trialEndDate, 'MMM d, yyyy', 'Date unavailable')}
                       </p>
                     </div>
                   )}
